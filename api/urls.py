@@ -10,4 +10,8 @@ urlpatterns = [
 
     #работа с тех.поддержкой
     path('get-questions/', get_questions),
+    path('create-questions/', create_questions),
+
+    #test
+    path('test/', test),
 ]

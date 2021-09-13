@@ -21,7 +21,7 @@ def auth(request):
     
     #проверяем на то, есть ли поле с номером телефона
     phone = request.data.get('phone', None)
-    if phone == 'None':
+    if phone == None:
         return Response(
             data = {"message": "1"},
             status = status.HTTP_400_BAD_REQUEST
@@ -164,13 +164,18 @@ def update_account(request):
 
     #серриализуем данные
     serializer = SecondPersonalDataSerializer(instance=personal_data, data=request.data)
-    if serializer.is_valid(raise_exception=True):
+    if serializer.is_valid(raise_exception=False):
         try:
             os.remove(personal_data.photo.path)
         except:
             pass
 
         data = serializer.save()
+    else:
+        return Response(
+            data = {"message": "10"},
+            status = status.HTTP_400_BAD_REQUEST
+        )
 
     return Response(
         data = PersonalDataSerializer(data).data
@@ -197,9 +202,133 @@ def get_questions(request):
 @api_view(['POST'])
 @authentication_classes([TokenAuthentication])
 @permission_classes([IsAuthenticated])
-def get_questions(request):
+def create_questions(request):
     '''создать новый вопрос'''
 
+    #вывести юзера 
+    user = request.user
     
+    #создать новый вопрос 
+    serializer = SupportSerializer(instance=user, data=request.data)
+    if serializer.is_valid(raise_exception=True):
+        serializer.save()
+
+    #выводим все вопросы
+    support = SupportModel.objects.filter(user=user)
+    return Response(data=SupportSerializer(support, many=True).data)
+
+@api_view(['GET'])
+@authentication_classes([TokenAuthentication])
+@permission_classes([IsAuthenticated])
+def get_all_adress(request):
+    '''получить все адреса'''
+
+    #вывести юзера 
+    user = request.user
+    
+    #отправить серриализованные данные 
+    all_adress = AddressModel.objects.filter(user=user)
+    return Response(
+        data = YourAdressSerializer(all_adress, many=True).data
+    )
+
+@api_view(['POST'])
+@authentication_classes([TokenAuthentication])
+@permission_classes([IsAuthenticated])
+def update_adress(request):
+    '''обновить како-то адрес'''
+
+    try:
+        adress_object = AddressModel.objects.get(
+            id = request.data.get('id', None),
+            user = request.user
+        )
+    except:
+        return Response(
+            data = {"message": "10"},
+            status = status.HTTP_400_BAD_REQUEST
+        )
+
+    #проверка данных 
+    serializer = UpdateSerializer(
+        instance = adress_object,
+        data = request.data
+    )
+
+    if serializer.is_valid(raise_exception=False):
+        serializer_save = serializer.save()
+
+    return Response(
+        data = UpdateSerializer(serializer_save).data
+    )
+
+@api_view(['POST'])
+@authentication_classes([TokenAuthentication])
+@permission_classes([IsAuthenticated])
+def get_adress(request):
+    '''получить подробно один какой-то адрес'''
+
+    try:
+        adress_object = AddressModel.objects.get(
+            id = request.data.get('id', None),
+            user = request.user
+        )
+    except:
+        return Response(
+            data = {"message": "10"},
+            status = status.HTTP_400_BAD_REQUEST
+        )
+
+    return Response(
+        data = UpdateSerializer(adress_object).data
+    )
+
+@api_view(['POST'])
+@authentication_classes([TokenAuthentication])
+@permission_classes([IsAuthenticated])
+def create_adress_booking(request):
+    '''создать адрес(или взять готовый) и заплатить'''
+
+    #проверка на то, верные ли данные
+    if not BookingBookingSerializer(data=request.data.get('booking', {})).is_valid(raise_exception=False):
+        return Response(
+            data = {"message": "10"},
+            status = status.HTTP_400_BAD_REQUEST
+        )
+    if not BookingAdressSerializer(data=request.data.get('adress', {})).is_valid(raise_exception=False):
+        return Response(
+            data = {"message": "10"},
+            status = status.HTTP_400_BAD_REQUEST
+        )
+
+    #проверка на то, если данный адрес в таблице
+    if len(AddressModel.objects.filter(user=request.user, **request.data.get('adress'))) > 0:
+        adress_object = AddressModel.objects.filter(user=request.user, **request.data.get('adress'))[0]
+        booking_objects = BookingModel.obejcts.create(
+            adress = adress_object,
+            **request.data.get('booking')
+        )
+        booking_objects.save()
+    else:
+        adress_object = AddressModel.objects.create(
+            user = request.user,
+            **request.data.get('adress')
+        )
+        BookingModel.objects.create(
+            adress = adress_object,
+            **request.data.get('booking')
+        )
 
     return Response()
+    
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def test(request):
+    class Ser(serializers.Serializer):
+        a = serializers.IntegerField()
+
+    if Ser(data=request.data).is_valid(raise_exception=True):
+        return Response()
+
+

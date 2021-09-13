@@ -1,5 +1,7 @@
 from rest_framework import serializers
 
+from .models import *
+
 class PersonalDataSerializer(serializers.Serializer):
     name = serializers.CharField(allow_null=True)
     surname = serializers.CharField(allow_null=True)
@@ -37,3 +39,78 @@ class SupportSerializer(serializers.Serializer):
     answer = serializers.CharField()
     text = serializers.CharField(allow_null=True)
 
+    def update(self, instance, validated_data):
+        return SupportModel.objects.create(
+            user = instance,
+            question_type = validated_data.get("question_type"),
+            text = validated_data.get("text"),
+            answer = None
+        ) 
+
+###def create(self, validated_data):
+###        return Article.objects.create(**validated_data)
+
+class YourAdressSerializer(serializers.ModelSerializer):
+    '''сериализатор для экрана ВАШИ АДРЕСА'''
+
+    class Meta:
+        model = AddressModel
+        fields = [
+            'id', 'flat_or_office',
+            'area', 'adress', 'flat_or_office',
+            'price'
+        ]
+
+class UpdateSerializer(serializers.ModelSerializer):
+    '''сериализатор для обновления адреса'''
+
+    class Meta:
+        model = AddressModel
+        fields = [
+            'id', 'cleaning_type',
+            'premises_type', 'area', 'door',
+            'window', 'bathroom', 'adress',
+            'flat_or_office', 'mkad', 
+            'comment', 'price',
+            'bonuce'
+        ]
+
+    def update(self, instance, validated_data):
+        instance.cleaning_type = validated_data.get('cleaning_type', instance.cleaning_type)
+        instance.premises_type = validated_data.get('premises_type', instance.premises_type)
+        instance.area = validated_data.get('area', instance.area)
+        instance.door = validated_data.get('door', instance.door)
+        instance.window = validated_data.get('window', instance.window)
+        instance.bathroom = validated_data.get('bathroom', instance.bathroom)
+        instance.adress = validated_data.get('adress', instance.adress)
+        instance.flat_or_office = validated_data.get('flat_or_office', instance.flat_or_office)
+        instance.mkad = validated_data.get('mkad', instance.mkad)
+        instance.comment = validated_data.get('comment', instance.comment)
+        instance.price = validated_data.get('price', instance.price)
+        instance.bonuce = validated_data.get('bonuce', instance.bonuce)
+
+        instance.save()
+        return instance
+
+class BookingAdressSerializer(serializers.ModelSerializer):
+    '''сериализатор для покупки'''
+
+    class Meta:
+        model = AddressModel
+        fields = [
+            'cleaning_type',
+            'premises_type', 'area', 'door',
+            'window', 'bathroom', 'adress',
+            'flat_or_office', 'mkad', 
+            'price', 'bonuce'
+        ]
+
+class BookingBookingSerializer(serializers.ModelSerializer):
+    '''сериализатор для покупки'''
+
+    class Meta:
+        model = BookingModel
+        fields = [
+            'date', 'time', 
+            'payment_tupe', 'bonus_size', 
+        ]

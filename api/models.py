@@ -29,17 +29,13 @@ class AddressModel(models.Model):
     door = models.IntegerField()
     window = models.IntegerField()
     bathroom = models.IntegerField()
-    city = models.CharField(max_length=100)
-    street = models.CharField(max_length=100)
-    house = models.IntegerField()
+    adress = models.TextField()
     flat_or_office = models.CharField(max_length=100)
     mkad = models.IntegerField()
     comment = models.TextField(null=True, blank=True)
-    date = models.DateTimeField()
-    time = models.TimeField()
     price = models.IntegerField()
     bonuce = models.IntegerField()
-    payment_tupe = models.CharField(max_length=100)
+    
 
 class SupportModel(models.Model):
     id = models.AutoField(primary_key=True)
@@ -48,14 +44,18 @@ class SupportModel(models.Model):
     text = models.TextField()
     answer = models.TextField(null=True, blank=True)
 
-class MyAdress(models.Model):
+class SMSTokenModel(models.Model):
     id = models.AutoField(primary_key=True)
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
-    city = models.CharField(max_length=100)
-    street = models.CharField(max_length=100)
-    house = models.IntegerField()
-    flat = models.IntegerField(null=True, blank=True)
-    
+    token = models.TextField()
+
+class BookingModel(models.Model):
+    id = models.AutoField(primary_key=True)
+    adress = models.ForeignKey(AddressModel, on_delete=models.CASCADE)
+    date = models.DateTimeField()
+    time = models.TimeField()
+    payment_tupe = models.CharField(max_length=100)
+    bonus_size = models.IntegerField()
+    company_status = models.CharField(max_length=100)
 
 
 
