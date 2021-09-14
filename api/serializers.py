@@ -36,8 +36,8 @@ class SecondPersonalDataSerializer(serializers.Serializer):
 
 class SupportSerializer(serializers.Serializer):
     question_type = serializers.CharField()
-    answer = serializers.CharField()
-    text = serializers.CharField(allow_null=True)
+    text = serializers.CharField()
+    answer = serializers.CharField(allow_null=True)
 
     def update(self, instance, validated_data):
         return SupportModel.objects.create(

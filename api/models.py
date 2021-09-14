@@ -11,8 +11,8 @@ class PersonalDataModel(models.Model):
     company = models.BooleanField()
     inn = models.IntegerField(null=True, blank=True)
     mail = models.EmailField(null=True, blank=True)
-    balance = models.IntegerField(null=True, blank=True)
-    bonus_balance = models.IntegerField(null=True, blank=True)
+    balance = models.IntegerField()
+    bonus_balance = models.IntegerField()
 
     #для подтверждения аккаунта
     code = models.CharField(max_length=6)
@@ -51,11 +51,23 @@ class SMSTokenModel(models.Model):
 class BookingModel(models.Model):
     id = models.AutoField(primary_key=True)
     adress = models.ForeignKey(AddressModel, on_delete=models.CASCADE)
-    date = models.DateTimeField()
+    date = models.DateField()
     time = models.TimeField()
     payment_tupe = models.CharField(max_length=100)
     bonus_size = models.IntegerField()
     company_status = models.CharField(max_length=100)
+
+class BalancePlusHistory(models.Model):
+    '''модель для отслеживания баланса'''
+
+    id = models.AutoField(primary_key=True)
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    add_balance = models.IntegerField()
+    date = models.DateTimeField(auto_now_add=True)
+
+
+
+
 
 
 

@@ -3,7 +3,7 @@ import random
 
 from rest_framework import status
 from rest_framework.authentication import TokenAuthentication
-from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.permissions import AllowAny, IsAuthenticated, IsAdminUser
 from rest_framework.decorators import api_view, authentication_classes, permission_classes
 from rest_framework.response import Response
 from rest_framework.authtoken.models import Token
@@ -133,7 +133,10 @@ def account(request):
         data = PersonalDataSerializer(personal_data).data
 
         return Response(
-            data = data,
+            data = {
+                "main_info": data,
+                "phone": request.user.username
+            },
             status = status.HTTP_400_BAD_REQUEST
         )        
     except:
@@ -142,7 +145,7 @@ def account(request):
             status = status.HTTP_400_BAD_REQUEST
         )
 
-@api_view(['PUT'])
+@api_view(['POST'])
 @authentication_classes([TokenAuthentication])
 @permission_classes([IsAuthenticated])
 def update_account(request):
@@ -210,8 +213,13 @@ def create_questions(request):
     
     #создать новый вопрос 
     serializer = SupportSerializer(instance=user, data=request.data)
-    if serializer.is_valid(raise_exception=True):
+    if serializer.is_valid(raise_exception=False):
         serializer.save()
+    else:
+        return Response(
+            data = {"message": "11"},
+            status = status.HTTP_400_BAD_REQUEST
+        )
 
     #выводим все вопросы
     support = SupportModel.objects.filter(user=user)
@@ -289,46 +297,136 @@ def get_adress(request):
 def create_adress_booking(request):
     '''создать адрес(или взять готовый) и заплатить'''
 
+    #проверка на наличие баланса 
+    try:
+        price = request.data.get('adress').get('price')
+        balance = PersonalDataModel.objects.get(user=request.user).balance
+        if int(price) > int(balance):
+            return Response(
+                data = {"message": "102"},
+                status = status.HTTP_400_BAD_REQUEST
+            )
+    except:
+        return Response(
+            data = {"message": "102.1"},
+            status = status.HTTP_400_BAD_REQUEST
+        )
+
+    #проверка на наличие бонусов
+    try:
+        bonus_size = request.data.get('booking').get('bonus_size')
+        bonus_balance = PersonalDataModel.objects.get(user=request.user).bonus_balance
+        if int(bonus_size) > int(bonus_balance):
+            return Response(
+                data = {"message": "101"},
+                status = status.HTTP_400_BAD_REQUEST
+            )
+    except:
+        return Response(
+            data = {"message": "101.1"},
+            status = status.HTTP_400_BAD_REQUEST
+        )
+
     #проверка на то, верные ли данные
     if not BookingBookingSerializer(data=request.data.get('booking', {})).is_valid(raise_exception=False):
         return Response(
-            data = {"message": "10"},
+            data = {"message": "21"},
             status = status.HTTP_400_BAD_REQUEST
         )
     if not BookingAdressSerializer(data=request.data.get('adress', {})).is_valid(raise_exception=False):
         return Response(
-            data = {"message": "10"},
+            data = {"message": "22"},
             status = status.HTTP_400_BAD_REQUEST
         )
 
     #проверка на то, если данный адрес в таблице
     if len(AddressModel.objects.filter(user=request.user, **request.data.get('adress'))) > 0:
         adress_object = AddressModel.objects.filter(user=request.user, **request.data.get('adress'))[0]
-        booking_objects = BookingModel.obejcts.create(
+        booking_object = BookingModel.objects.create(
             adress = adress_object,
+            company_status = 'new',
             **request.data.get('booking')
         )
-        booking_objects.save()
     else:
         adress_object = AddressModel.objects.create(
             user = request.user,
             **request.data.get('adress')
         )
-        BookingModel.objects.create(
+        booking_object = BookingModel.objects.create(
             adress = adress_object,
+            company_status = 'new',
             **request.data.get('booking')
         )
 
+    #работа с балансом 
+    personal_object = PersonalDataModel.objects.get(user=request.user)
+    personal_object.balance = (personal_object.balance - booking_object.adress.price + int(booking_object.bonus_size))
+    personal_object.bonus_balance = (personal_object.bonus_balance - int(booking_object.bonus_size) + adress_object.bonuce)
+    personal_object.save()
+
     return Response()
-    
 
 @api_view(['POST'])
-@permission_classes([AllowAny])
-def test(request):
-    class Ser(serializers.Serializer):
-        a = serializers.IntegerField()
+@authentication_classes([TokenAuthentication])
+@permission_classes([IsAdminUser])
+def set_or_get_token(request):
+    '''данный запрос используется для получения и выведения токена'''
 
-    if Ser(data=request.data).is_valid(raise_exception=True):
-        return Response()
+    token = request.data.get('token', None)
+    
+    if ((type(token) != str) or (token == '')) and (token != None):
+        return Response(
+            data = {"message": "23"},
+            status = status.HTTP_400_BAD_REQUEST
+        )
+    
+    if token != None:
+        for i in SMSTokenModel.objects.all():
+            i.delete()
+        a = SMSTokenModel.objects.create(
+            token = token
+        )
+        return Response(data={
+            "token": token
+        })
+    else:
+        if len(SMSTokenModel.objects.all()) < 1:
+            return Response(
+                data = {"message": "24"},
+                status = status.HTTP_400_BAD_REQUEST
+            ) 
+        else:
+            a = SMSTokenModel.objects.all()[0].token
+            return Response(data={
+                "token": a
+            })
+    
+@api_view(['POST'])
+@authentication_classes([TokenAuthentication])
+@permission_classes([IsAuthenticated])
+def set_balance(request):
+    """поплняет баланс"""
+
+    #проверяем, что передал пользователь в запросе
+    balance = request.data.get('balance', None)
+    if type(balance) != int:
+        return Response(
+            data = {"message": "25"},
+            status = status.HTTP_400_BAD_REQUEST
+        ) 
+
+    #прибавляем баланс 
+    user_obeject = PersonalDataModel.objects.get(
+        user = request.user
+    )
+    user_obeject.balance = user_obeject.balance + balance
+    user_obeject.save()
+
+    BalancePlusHistory.objects.create(
+        user = request.user,
+        add_balance = balance
+    )
+
+    return Response()
 
 
