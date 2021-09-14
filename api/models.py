@@ -30,7 +30,7 @@ class AddressModel(models.Model):
     window = models.IntegerField()
     bathroom = models.IntegerField()
     adress = models.TextField()
-    flat_or_office = models.CharField(max_length=100)
+    flat_or_office = models.CharField(max_length=100, null=True, blank=True)
     mkad = models.IntegerField()
     comment = models.TextField(null=True, blank=True)
     price = models.IntegerField()
