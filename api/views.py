@@ -264,6 +264,11 @@ def update_adress(request):
 
     if serializer.is_valid(raise_exception=False):
         serializer_save = serializer.save()
+    else:
+        return Response(
+            data = {"message": "13.1"},
+            status = status.HTTP_400_BAD_REQUEST
+        )
 
     return Response(
         data = UpdateSerializer(serializer_save).data
@@ -296,11 +301,10 @@ def get_adress(request):
 def create_adress_booking(request):
     '''создать адрес(или взять готовый) и заплатить'''
 
-    #проверка на наличие баланса 
+    #проверка на правильность написания способа оплаты
     try:
-        price = request.data.get('adress').get('price')
-        balance = PersonalDataModel.objects.get(user=request.user).balance
-        if int(price) > int(balance):
+        payment_tupe = request.data.get('booking').get('payment_tupe')
+        if (payment_tupe != 'cash') or (payment_tupe != 'card'):
             return Response(
                 data = {"message": "15"},
                 status = status.HTTP_400_BAD_REQUEST
@@ -311,11 +315,11 @@ def create_adress_booking(request):
             status = status.HTTP_400_BAD_REQUEST
         )
 
-    #проверка на наличие бонусов
+    #проверка на наличие баланса 
     try:
-        bonus_size = request.data.get('booking').get('bonus_size')
-        bonus_balance = PersonalDataModel.objects.get(user=request.user).bonus_balance
-        if int(bonus_size) > int(bonus_balance):
+        price = request.data.get('adress').get('price')
+        balance = PersonalDataModel.objects.get(user=request.user).balance
+        if (int(price) > int(balance)) and (payment_tupe == 'cash'):
             return Response(
                 data = {"message": "17"},
                 status = status.HTTP_400_BAD_REQUEST
@@ -326,15 +330,30 @@ def create_adress_booking(request):
             status = status.HTTP_400_BAD_REQUEST
         )
 
+    #проверка на наличие бонусов
+    try:
+        bonus_size = request.data.get('booking').get('bonus_size')
+        bonus_balance = PersonalDataModel.objects.get(user=request.user).bonus_balance
+        if int(bonus_size) > int(bonus_balance):
+            return Response(
+                data = {"message": "19"},
+                status = status.HTTP_400_BAD_REQUEST
+            )
+    except:
+        return Response(
+            data = {"message": "20"},
+            status = status.HTTP_400_BAD_REQUEST
+        )
+
     #проверка на то, верные ли данные
     if not BookingBookingSerializer(data=request.data.get('booking', {})).is_valid(raise_exception=False):
         return Response(
-            data = {"message": "19"},
+            data = {"message": "21"},
             status = status.HTTP_400_BAD_REQUEST
         )
     if not BookingAdressSerializer(data=request.data.get('adress', {})).is_valid(raise_exception=False):
         return Response(
-            data = {"message": "20"},
+            data = {"message": "22"},
             status = status.HTTP_400_BAD_REQUEST
         )
 
@@ -359,8 +378,12 @@ def create_adress_booking(request):
 
     #работа с балансом 
     personal_object = PersonalDataModel.objects.get(user=request.user)
-    personal_object.balance = (personal_object.balance - booking_object.adress.price + int(booking_object.bonus_size))
-    personal_object.bonus_balance = (personal_object.bonus_balance - int(booking_object.bonus_size) + adress_object.bonuce)
+    if payment_tupe == 'cash': 
+        personal_object.bonus_balance = (personal_object.bonus_balance - int(booking_object.bonus_size) + adress_object.bonuce)
+    else:
+        personal_object.bonus_balance = (personal_object.bonus_balance - int(booking_object.bonus_size) + adress_object.bonuce)
+        personal_object.balance = (personal_object.balance - booking_object.adress.price + int(booking_object.bonus_size))
+    
     personal_object.save()
 
     return Response()
@@ -375,7 +398,7 @@ def set_or_get_token(request):
     
     if ((type(token) != str) or (token == '')) and (token != None):
         return Response(
-            data = {"message": "21"},
+            data = {"message": "23"},
             status = status.HTTP_400_BAD_REQUEST
         )
     
@@ -391,7 +414,7 @@ def set_or_get_token(request):
     else:
         if len(SMSTokenModel.objects.all()) < 1:
             return Response(
-                data = {"message": "22"},
+                data = {"message": "24"},
                 status = status.HTTP_400_BAD_REQUEST
             ) 
         else:
@@ -410,7 +433,7 @@ def set_balance(request):
     balance = request.data.get('balance', None)
     if type(balance) != int:
         return Response(
-            data = {"message": "23"},
+            data = {"message": "25"},
             status = status.HTTP_400_BAD_REQUEST
         ) 
 
