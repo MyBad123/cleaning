@@ -1,5 +1,6 @@
 import os
 import random
+import yookassa
 
 from rest_framework import status
 from rest_framework.authentication import TokenAuthentication
@@ -423,11 +424,12 @@ def set_or_get_token(request):
                 "token": a
             })
     
+
 @api_view(['POST'])
 @authentication_classes([TokenAuthentication])
 @permission_classes([IsAuthenticated])
 def set_balance(request):
-    """поплняет баланс"""
+    """заявка на пополнение баланса"""
 
     #проверяем, что передал пользователь в запросе
     balance = request.data.get('balance', None)
@@ -437,17 +439,69 @@ def set_balance(request):
             status = status.HTTP_400_BAD_REQUEST
         ) 
 
-    #прибавляем баланс 
-    user_obeject = PersonalDataModel.objects.get(
-        user = request.user
-    )
-    user_obeject.balance = user_obeject.balance + balance
-    user_obeject.save()
+    #пополнить баланс
+    yookassa.Configuration.configure('823848', 'live_NYj6S7t_FN_beWVPZTrolQ-8TdssWpO04U-xwYCuDBA')
+    payment = yookassa.Payment.create({
+        "amount": {
+            "value": str(balance) + ".00", 
+            "currency": "RUB"
+        }, 
+        "confirmation": {
+            "type": "embedded"
+        },
+        "capture": True,
+        "description": "описание"
+    })
+    
+    return Response(data={
+        "id": payment.id,
+        "token": payment.confirmation.confirmation_token
+    })
 
-    BalancePlusHistory.objects.create(
-        user = request.user,
-        add_balance = balance
-    )
+
+@api_view(['POST'])
+@authentication_classes([TokenAuthentication])
+@permission_classes([IsAuthenticated])
+def set_verify_balance(request):
+    """подтверждение пополнения баланса"""
+
+    #проверяем, что отравил пользователь
+    id_pay = request.data.get('id', None)
+    if (id_pay == None) or (type(id_pay) != str):
+        return Response(
+            data = {"message": "26"},
+            status = status.HTTP_400_BAD_REQUEST
+        ) 
+
+    #проверяем, оплатил ли пользователь
+    yookassa.Configuration.configure('823848', 'live_NYj6S7t_FN_beWVPZTrolQ-8TdssWpO04U-xwYCuDBA')
+    try:
+        payment = yookassa.Payment.find_one(id_pay)
+    except:
+        return Response(
+            data = {"message": "27"},
+            status = status.HTTP_400_BAD_REQUEST
+        )
+
+    if payment.status == 'succeeded':
+    
+        #прибавляем баланс 
+        user_obeject = PersonalDataModel.objects.get(
+            user = request.user
+        )
+        user_obeject.balance = user_obeject.balance + int(a.amount.value)
+        user_obeject.save()
+
+        BalancePlusHistory.objects.create(
+            user = request.user,
+            add_balance = int(a.amount.value)
+        )
+    
+    else:
+        return Response(
+            data = {"message": "28"},
+            status = status.HTTP_400_BAD_REQUEST
+        )
 
     return Response()
 

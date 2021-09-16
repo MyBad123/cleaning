@@ -14,7 +14,7 @@ urlpatterns = [
 
     #работа с адресами
     path('get-all-adress/', get_all_adress),
-    path('create-adress-booking/', create_adress_booking),
+    path('create-adress-booking/', create_adress_booking), 
     path('get-adress/', get_adress),
     path('update-adress/', update_adress),
     
@@ -24,4 +24,5 @@ urlpatterns = [
 
     #работа с балансом
     path('set-balance/', set_balance),
+    path('set-verify-balance/', set_verify_balance),
 ]
