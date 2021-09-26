@@ -9,7 +9,6 @@ class PersonalDataSerializer(serializers.Serializer):
     company = serializers.BooleanField()
     inn = serializers.IntegerField(allow_null=True)
     mail = serializers.EmailField(allow_null=True)
-    balance = serializers.IntegerField(allow_null=True)
     bonus_balance = serializers.IntegerField(allow_null=True)
     photo = serializers.ImageField(allow_null=True)
 

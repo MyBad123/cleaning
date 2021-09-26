@@ -11,7 +11,6 @@ class PersonalDataModel(models.Model):
     company = models.BooleanField()
     inn = models.IntegerField(null=True, blank=True)
     mail = models.EmailField(null=True, blank=True)
-    balance = models.IntegerField()
     bonus_balance = models.IntegerField()
 
     #для подтверждения аккаунта
@@ -57,13 +56,7 @@ class BookingModel(models.Model):
     bonus_size = models.IntegerField()
     company_status = models.CharField(max_length=100)
 
-class BalancePlusHistory(models.Model):
-    '''модель для отслеживания баланса'''
 
-    id = models.AutoField(primary_key=True)
-    user = models.ForeignKey(User, on_delete=models.CASCADE)
-    add_balance = models.IntegerField()
-    date = models.DateTimeField(auto_now_add=True)
 
 
 
