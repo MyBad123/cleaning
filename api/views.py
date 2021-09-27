@@ -300,49 +300,106 @@ def get_adress(request):
 @authentication_classes([TokenAuthentication])
 @permission_classes([IsAuthenticated])
 def create_payment(request):
-    '''это для того, чтоб создать платеж'''
-
-    #проверка на наличие бонусов
+    '''это для того, чтоб создать платеж''' 
+    
+    #проверка на правильность написания способа оплаты
     try:
-        bonus_size = request.data.get('bonus_size')
-        bonus_balance = PersonalDataModel.objects.get(user=request.user).bonus_balance
-        if int(bonus_size) > int(bonus_balance):
+        payment_tupe = request.data.get('booking').get('payment_tupe')
+        if (payment_tupe != 'cash') and (payment_tupe != 'card'):
             return Response(
                 data = {"message": "1"},
                 status = status.HTTP_400_BAD_REQUEST
             )
     except:
         return Response(
-            data = {"message": "2"},
+            data = {"message": "3"},
             status = status.HTTP_400_BAD_REQUEST
         )
 
-    #проверяем сумму
-    user_sum = request.data.get('sum', None)
-    if (type(user_sum) != int):
-        return Response(data = {"message": "3"}, status=status.HTTP_400_BAD_REQUEST)
+    #проверка на наличие бонусов
+    try:
+        bonus_size = request.data.get('booking').get('bonus_size')
+        bonus_balance = PersonalDataModel.objects.get(user=request.user).bonus_balance
+        if int(bonus_size) > int(bonus_balance):
+            return Response(
+                data = {"message": "4"},
+                status = status.HTTP_400_BAD_REQUEST
+            )
+    except:
+        return Response(
+            data = {"message": "5"},
+            status = status.HTTP_400_BAD_REQUEST
+        )
+    
+    #достаем цену из адреса 
+    try:
+        price = request.data.get('address').get('price')
+    except:
+        return Response(
+            data = {"message": "6"},
+            status = status.HTTP_400_BAD_REQUEST
+        )
+
+    if (type(price) != int):
+        return Response(
+            data = {"message": "7"},
+            status = status.HTTP_400_BAD_REQUEST
+        )
 
     if (user_sum < 0):
-        return Response(data = {"message": "4"}, status=status.HTTP_400_BAD_REQUEST)
+        return Response(
+            data = {"message": "8"},
+            status = status.HTTP_400_BAD_REQUEST
+        )
 
-    #создаем платеж 
-    yookassa.Configuration.configure('823848', 'live_NYj6S7t_FN_beWVPZTrolQ-8TdssWpO04U-xwYCuDBA')
-    payment = yookassa.Payment.create({
-        "amount": {
-            "value": str(user_sum) + ".00", 
-            "currency": "RUB"
-        }, 
-        "confirmation": {
-            "type": "embedded"
-        },
-        "capture": True,
-        "description": "описание"
-    })
+    #удаляем из временных данных объект
+    if len(TemporaryAddressModel.objects.filter(user=request.user)) > 0:
+        TemporaryAddressModel.objects.get(user=request.user).delete()
 
-    return Response(data={
-        "id": payment.id,
-        "token": payment.confirmation.confirmation_token
-    })
+
+    #после успешного создания платежа закидываем данные во временные данные(предварительно проверяем)
+    if not BookingBookingSerializer(data=request.data.get('booking', {})).is_valid(raise_exception=False):
+        return Response(
+            data = {"message": "9"},
+            status = status.HTTP_400_BAD_REQUEST
+        )
+    if not BookingAdressSerializer(data=request.data.get('adress', {})).is_valid(raise_exception=False):
+        return Response(
+            data = {"message": "10"},
+            status = status.HTTP_400_BAD_REQUEST
+        )
+
+    adress_object = TemporaryAddressModel.objects.create(
+        user = request.user,
+        **request.data.get('adress')
+    )
+    booking_object = TemporaryBookingModel.objects.create(
+        adress = adress_object,
+        company_status = 'new',
+        **request.data.get('booking')
+    )
+
+    if payment_tupe == 'card':
+        #создаем платеж
+        yookassa.Configuration.configure('823848', 'live_NYj6S7t_FN_beWVPZTrolQ-8TdssWpO04U-xwYCuDBA')
+        payment = yookassa.Payment.create({
+            "amount": {
+                "value": str(price) + ".00", 
+                "currency": "RUB"
+            }, 
+            "confirmation": {
+                "type": "embedded"
+            },
+            "capture": True,
+            "description": "описание"
+        })
+
+        return Response(data={
+            "id": payment.id,
+            "token": payment.confirmation.confirmation_token
+        })    
+    else:
+        return Response()
 
 
 @api_view(['POST'])
@@ -351,101 +408,80 @@ def create_payment(request):
 def confirm_payment(request):
     '''этот запрос для подтверждения покупки'''
 
-    #проверка на правильность написания способа оплаты
-    try:
-        payment_tupe = request.data.get('booking').get('payment_tupe')
-        if (payment_tupe != 'cash') or (payment_tupe != 'card'):
-            return Response(
-                data = {"message": "15"},
-                status = status.HTTP_400_BAD_REQUEST
-            )
-    except:
+    #проверяем, есть ли вообще у пользователя временные данные
+    if len(TemporaryBookingModel.objects.filter(adress__user=request.user)) == 0:
         return Response(
-            data = {"message": "16"},
+            data = {"message": "1"},
             status = status.HTTP_400_BAD_REQUEST
         )
+    else:
+        temporary_booking = TemporaryBookingModel.objects.get(adress__user=request.user)
 
-    if payment_tupe == 'card':
-        #достаем цену из адреса 
+    if temporary_booking.payment_tupe == 'card':
+        #проверка, были ли данные вообще у пользователя
         try:
-            price = request.data.get('address').get('price')
+            pay_id = TemporaryIdPayModel.obejcts.get(booking__adress__user=request.user).id_pay
         except:
-            return Response(status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                data = {"message": "2"},
+                status = status.HTTP_400_BAD_REQUEST
+            )
 
-        if (type(price) != int):
-            return Response(status=status.HTTP_400_BAD_REQUEST)
-
-        #достаем объект платежа
-        id_pay = request.data.get('id_pay')
+        #работа с проверкой оплаты
         yookassa.Configuration.configure('823848', 'live_NYj6S7t_FN_beWVPZTrolQ-8TdssWpO04U-xwYCuDBA')
         try:
-            payment = yookassa.Payment.find_one(id_pay)
+            payment = yookassa.Payment.find_one(pay_id)
         except:
             return Response(
-                data = {"message": "27"},
+                data = {"message": "3"},
                 status = status.HTTP_400_BAD_REQUEST
             )
 
-        #проверяем, соответствует ли данный платеж цене
-        if str(payment.amount.value) != (str(price) + '.00'):
+        #проверяем соответствие между суммами
+        temporary_address = TemporaryAddressModel.objects.get(user=request.user)
+        if str(payment.amount.value) != (str(temporary_address.price) + '.00'):
             return Response(
-                data = {"message": "27"},
+                data = {"message": "4"},
                 status = status.HTTP_400_BAD_REQUEST
             )
+    elif temporary_booking.payment_tupe == 'cash':
+        pass
     else:
-        #проверка на наличие бонусов
-        try:
-            bonus_size = request.data.get('booking').get('bonus_size')
-            bonus_balance = PersonalDataModel.objects.get(user=request.user).bonus_balance
-            if int(bonus_size) > int(bonus_balance):
-                return Response(
-                    data = {"message": "19"},
-                    status = status.HTTP_400_BAD_REQUEST
-                )
-        except:
-            return Response(
-                data = {"message": "20"},
-                status = status.HTTP_400_BAD_REQUEST
-            )  
-
-    #проверка на то, верные ли данные
-    if not BookingBookingSerializer(data=request.data.get('booking', {})).is_valid(raise_exception=False):
         return Response(
-            data = {"message": "21"},
-            status = status.HTTP_400_BAD_REQUEST
-        )
-    if not BookingAdressSerializer(data=request.data.get('adress', {})).is_valid(raise_exception=False):
-        return Response(
-            data = {"message": "22"},
+            data = {"message": "5"},
             status = status.HTTP_400_BAD_REQUEST
         )
 
-    #проверка на то, если данный адрес в таблице
-    if len(AddressModel.objects.filter(user=request.user, **request.data.get('adress'))) > 0:
-        adress_object = AddressModel.objects.filter(user=request.user, **request.data.get('adress'))[0]
-        booking_object = BookingModel.objects.create(
-            adress = adress_object,
-            company_status = 'new',
-            **request.data.get('booking')
-        )
-    else:
-        adress_object = AddressModel.objects.create(
-            user = request.user,
-            **request.data.get('adress')
-        )
-        booking_object = BookingModel.objects.create(
-            adress = adress_object,
-            company_status = 'new',
-            **request.data.get('booking')
-        )
+    #заполнение основных данных 
+    address_model = AddressModel.objects.create(
+        user = request.user, 
+        cleaning_type = temporary_address.cleaning_type,
+        premises_type = temporary_address.premises_type,
+        area = temporary_address.area,
+        door = temporary_address.door,
+        window = temporary_address.window,
+        bathroom = temporary_address.bathroom,
+        adress = temporary_address.adress,
+        flat_or_office = temporary_address.flat_or_office,
+        mkad = temporary_address.mkad,
+        comment = temporary_address.comment,
+        price = temporary_address.price,
+        bonuce = temporary_address.bonuce,
+    )
+    booking_object = BookingModel.objects.create(
+        adress = address_model,
+        date = temporary_booking.date,
+        time = temporary_booking.time,
+        payment_tupe = temporary_booking.payment_tupe,
+        bonus_size = temporary_booking.bonus_size,
+        company_status = temporary_booking.company_status
+    )
+    
+    temporary_address.delete()
 
     #работа с балансом 
     personal_object = PersonalDataModel.objects.get(user=request.user)
-    if payment_tupe == 'cash': 
-        personal_object.bonus_balance = (personal_object.bonus_balance - int(booking_object.bonus_size) + adress_object.bonuce)
-    else:
-        personal_object.bonus_balance = (personal_object.bonus_balance - int(booking_object.bonus_size) + adress_object.bonuce)
-    
+    personal_object.bonus_balance = (personal_object.bonus_balance - int(booking_object.bonus_size) + address_model.bonuce)
     personal_object.save()
 
     #работа с смс 

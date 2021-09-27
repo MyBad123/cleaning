@@ -57,10 +57,42 @@ class BookingModel(models.Model):
     company_status = models.CharField(max_length=100)
 
 
+#данная модель нужна для того, чтоб 
+class TemporaryAddressModel(models.Model):
+    '''эта модель создана для временного адреса'''
+
+    id = models.AutoField(primary_key=True)
+    user = models.OneToOneField(User, on_delete=models.CASCADE)
+    cleaning_type = models.CharField(max_length=100)
+    premises_type = models.CharField(max_length=100)
+    area = models.IntegerField()
+    door = models.IntegerField()
+    window = models.IntegerField()
+    bathroom = models.IntegerField()
+    adress = models.TextField()
+    flat_or_office = models.CharField(max_length=100, null=True, blank=True)
+    mkad = models.IntegerField()
+    comment = models.TextField(null=True, blank=True)
+    price = models.IntegerField()
+    bonuce = models.IntegerField()
+
+class TemporaryBookingModel(models.Model):
+    '''эта модель создана для временной оплаты'''
+
+    id = models.AutoField(primary_key=True)
+    adress = models.OneToOneField(TemporaryAddressModel, on_delete=models.CASCADE)
+    date = models.DateField()
+    time = models.TimeField()
+    payment_tupe = models.CharField(max_length=100)
+    bonus_size = models.IntegerField()
+    company_status = models.CharField(max_length=100)
+
+class TemporaryIdPayModel(models.Model):
+    '''эта модель нужна для создания платежа'''
+
+    id = models.AutoField(primary_key=True)
+    booking = models.OneToOneField(TemporaryBookingModel, on_delete=models.CASCADE)
+    id_pay = models.TextField()
 
 
-
-
-
-
-
+    
