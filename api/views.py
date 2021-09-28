@@ -346,7 +346,7 @@ def create_payment(request):
             status = status.HTTP_400_BAD_REQUEST
         )
 
-    if (user_sum < 0):
+    if (price < 0):
         return Response(
             data = {"message": "8"},
             status = status.HTTP_400_BAD_REQUEST
@@ -393,6 +393,11 @@ def create_payment(request):
             "capture": True,
             "description": "описание"
         })
+
+        TemporaryIdPayModel.objects.create(
+            booking = booking_object,
+            id_pay = payment.id
+        )
 
         return Response(data={
             "id": payment.id,
@@ -453,7 +458,7 @@ def confirm_payment(request):
         )
 
     #заполнение основных данных 
-    address_model = AddressModel.objects.create(
+    len_adress = len(AddressModel.objects.filter(
         user = request.user, 
         cleaning_type = temporary_address.cleaning_type,
         premises_type = temporary_address.premises_type,
@@ -466,8 +471,42 @@ def confirm_payment(request):
         mkad = temporary_address.mkad,
         comment = temporary_address.comment,
         price = temporary_address.price,
-        bonuce = temporary_address.bonuce,
-    )
+        bonuce = temporary_address.bonuce
+    ))
+
+    if len_adress == 0:
+        address_model = AddressModel.objects.create(
+            user = request.user, 
+            cleaning_type = temporary_address.cleaning_type,
+            premises_type = temporary_address.premises_type,
+            area = temporary_address.area,
+            door = temporary_address.door,
+            window = temporary_address.window,
+            bathroom = temporary_address.bathroom,
+            adress = temporary_address.adress,
+            flat_or_office = temporary_address.flat_or_office,
+            mkad = temporary_address.mkad,
+            comment = temporary_address.comment,
+            price = temporary_address.price,
+            bonuce = temporary_address.bonuce,
+        )
+    else:
+        address_model = AddressModel.objects.filter(
+            user = request.user, 
+            cleaning_type = temporary_address.cleaning_type,
+            premises_type = temporary_address.premises_type,
+            area = temporary_address.area,
+            door = temporary_address.door,
+            window = temporary_address.window,
+            bathroom = temporary_address.bathroom,
+            adress = temporary_address.adress,
+            flat_or_office = temporary_address.flat_or_office,
+            mkad = temporary_address.mkad,
+            comment = temporary_address.comment,
+            price = temporary_address.price,
+            bonuce = temporary_address.bonuce,
+        )[0]
+        
     booking_object = BookingModel.objects.create(
         adress = address_model,
         date = temporary_booking.date,
@@ -529,7 +568,28 @@ def set_or_get_token(request):
                 "token": a
             })
     
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def get_options(request):
+    '''представление для данных калькулятора'''
 
-
-
+    if len(OptionsModel.objects.all()) > 0:
+        return Response(
+            data=OptionsSerializer(OptionsModel.objects.all()[0]).data
+        )
+    else:
+        return Response(data={
+            'type_regular': 1.0, 
+            'type_general': 1.0, 
+            'type_after_repair': 1.0, 
+            'type_building_flat': 1.0, 
+            'type_building_office': 1.0, 
+            'type_building_house': 1.0, 
+            'type_building_cafe': 1.0, 
+            'area': 1.0, 
+            'door': 1.0, 
+            'window': 1.0, 
+            'bathroom': 1.0, 
+            'mkad': 1.0
+        })
 

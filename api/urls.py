@@ -23,6 +23,11 @@ urlpatterns = [
 
 
     #работа с заказами 
+    #-
     path('create-payment/', create_payment),
-    path('confirm-payment/', confirm_payment)
+    #-
+    path('confirm-payment/', confirm_payment),
+
+    #передать переменные калькулятора 
+    path('get-options/', get_options),
 ]

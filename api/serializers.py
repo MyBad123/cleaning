@@ -49,19 +49,30 @@ class SupportSerializer(serializers.Serializer):
 ###def create(self, validated_data):
 ###        return Article.objects.create(**validated_data)
 
+class CoordinatesSerializer(serializers.ModelSerializer):
+    '''серриализатор для координат'''
+
+    class Meta:
+        model = CoordinatesModel
+        fields = '__all__'
+
 class YourAdressSerializer(serializers.ModelSerializer):
     '''сериализатор для экрана ВАШИ АДРЕСА'''
+
+    coordinates = CoordinatesSerializer()
 
     class Meta:
         model = AddressModel
         fields = [
             'id', 'flat_or_office',
             'area', 'adress', 'flat_or_office',
-            'price'
+            'price', 'coordinates'
         ]
 
 class UpdateSerializer(serializers.ModelSerializer):
     '''сериализатор для обновления адреса'''
+
+    coordinates = CoordinatesSerializer()
 
     class Meta:
         model = AddressModel
@@ -71,10 +82,24 @@ class UpdateSerializer(serializers.ModelSerializer):
             'window', 'bathroom', 'adress',
             'flat_or_office', 'mkad', 
             'comment', 'price',
-            'bonuce'
+            'bonuce', 'coordinates'
         ]
 
     def update(self, instance, validated_data):
+        #удаляем старые координаты
+        old_coords = instance.coordinates
+        try:
+            old_coords.delete()
+        except:
+            pass
+
+        #вставляем новые координаты
+        data_new_coords = validated_data.pop('coordinates')
+        try:
+            new_coords = CoordinatesModel.objects.create(**data_new_coords)
+        except:
+            pass
+
         instance.cleaning_type = validated_data.get('cleaning_type', instance.cleaning_type)
         instance.premises_type = validated_data.get('premises_type', instance.premises_type)
         instance.area = validated_data.get('area', instance.area)
@@ -87,6 +112,7 @@ class UpdateSerializer(serializers.ModelSerializer):
         instance.comment = validated_data.get('comment', instance.comment)
         instance.price = validated_data.get('price', instance.price)
         instance.bonuce = validated_data.get('bonuce', instance.bonuce)
+        instance.coordinates = new_coords
 
         instance.save()
         return instance
@@ -94,22 +120,32 @@ class UpdateSerializer(serializers.ModelSerializer):
 class BookingAdressSerializer(serializers.ModelSerializer):
     '''сериализатор для покупки'''
 
+    coordinates = CoordinatesSerializer()
+
     class Meta:
-        model = AddressModel
+        model = TemporaryAddressModel
         fields = [
             'cleaning_type',
             'premises_type', 'area', 'door',
             'window', 'bathroom', 'adress',
             'flat_or_office', 'mkad', 
-            'price', 'bonuce'
+            'price', 'bonuce', 'coordinates'
         ]
 
 class BookingBookingSerializer(serializers.ModelSerializer):
     '''сериализатор для покупки'''
 
     class Meta:
-        model = BookingModel
+        model = TemporaryBookingModel
         fields = [
             'date', 'time', 
             'payment_tupe', 'bonus_size', 
         ]
+
+
+class OptionsSerializer(serializers.ModelSerializer):
+    '''сериализатор для данных калькулятора'''
+
+    class Meta:
+        model = OptionsModel
+        exclude = ['id']

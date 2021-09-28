@@ -19,6 +19,15 @@ class PersonalDataModel(models.Model):
     #фото аккаунта
     photo = models.ImageField(upload_to='user_photo/', null=True, blank=True)
 
+class CoordinatesModel(models.Model):
+    '''эта модель нужна для координат'''
+
+    id = models.AutoField(primary_key=True)
+    latitude = models.CharField(max_length=200)
+    longitude = models.CharField(max_length=200)
+    latitudeDelta = models.CharField(max_length=200)
+    longitudeDelta = models.CharField(max_length=200)
+
 class AddressModel(models.Model):
     id = models.AutoField(primary_key=True)
     user = models.ForeignKey(User, on_delete=models.CASCADE)
@@ -34,6 +43,11 @@ class AddressModel(models.Model):
     comment = models.TextField(null=True, blank=True)
     price = models.IntegerField()
     bonuce = models.IntegerField()
+
+    #для координат
+    coordinates = models.ForeignKey(CoordinatesModel, on_delete=models.SET_NULL, null=True)
+
+    
     
 
 class SupportModel(models.Model):
@@ -94,5 +108,28 @@ class TemporaryIdPayModel(models.Model):
     booking = models.OneToOneField(TemporaryBookingModel, on_delete=models.CASCADE)
     id_pay = models.TextField()
 
+class OptionsModel(models.Model):
+    '''модель параметров для калькулятора'''
+
+    id = models.AutoField(primary_key=True)
+
+    #типы уборки
+    type_regular = models.FloatField()
+    type_general = models.FloatField()
+    type_after_repair = models.FloatField()
+
+    #типы помещения 
+    type_building_flat = models.FloatField()
+    type_building_office = models.FloatField()
+    type_building_house = models.FloatField()
+    type_building_cafe = models.FloatField()
+
+    #остальные параметры
+    area = models.FloatField()
+    door = models.FloatField()
+    window = models.FloatField()
+    bathroom = models.FloatField()
+
+    mkad = models.FloatField()
 
     

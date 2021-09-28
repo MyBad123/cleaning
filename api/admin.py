@@ -7,4 +7,6 @@ admin.site.register(AddressModel)
 admin.site.register(SupportModel)
 admin.site.register(SMSTokenModel)
 admin.site.register(BookingModel)
+admin.site.register(OptionsModel)
+admin.site.register(CoordinatesModel)
 
