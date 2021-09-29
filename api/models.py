@@ -23,10 +23,10 @@ class CoordinatesModel(models.Model):
     '''эта модель нужна для координат'''
 
     id = models.AutoField(primary_key=True)
-    latitude = models.CharField(max_length=200)
-    longitude = models.CharField(max_length=200)
-    latitudeDelta = models.CharField(max_length=200)
-    longitudeDelta = models.CharField(max_length=200)
+    latitude = models.FloatField()
+    longitude = models.FloatField()
+    latitudeDelta = models.FloatField()
+    longitudeDelta = models.FloatField()
 
 class AddressModel(models.Model):
     id = models.AutoField(primary_key=True)

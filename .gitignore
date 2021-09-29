@@ -136,3 +136,9 @@ dmypy.json
 
 # Cython debug symbols
 cython_debug/
+
+#my settings 
+api/migrations/*.py
+!api/migrations/__init__.py
+
+

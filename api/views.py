@@ -12,6 +12,14 @@ from rest_framework.authtoken.models import Token
 
 from django.contrib.auth.models import User
 
+#для почты
+import smtplib
+
+from email.mime.multipart import MIMEMultipart      
+from email.mime.text import MIMEText                
+from email.mime.image import MIMEImage
+
+#мои файлы
 from .models import *
 from .serializers import *
 
@@ -416,6 +424,107 @@ def create_payment(request):
     else:
         return Response()
 
+def my_send_mail(booking_object):
+    #формируем ссылку на карту
+    a1 = booking_object.adress.coordinates.latitude
+    a1 = str(a1).replace(',', '.')
+
+    a2 = booking_object.adress.coordinates.longitude
+    a2 = str(a2).replace(',', '.')
+    
+    
+
+    map_ref = 'http://maps.google.com/maps?q=' + a1 + ',' + a2 + '&z=17'
+    print(map_ref)
+
+    #разбираемся с переменными
+    data_for_html = {
+        'value1': str(booking_object.id),
+        'value3': booking_object.payment_tupe,
+        'value4': booking_object.adress.cleaning_type,
+        'value5': booking_object.adress.premises_type,
+        'value6': str(booking_object.adress.area),
+        'value7': str(booking_object.adress.door),
+        'value8': str(booking_object.adress.window),
+        'value9': str(booking_object.adress.bathroom),
+        'value10': str(booking_object.adress.mkad),
+        'value11': booking_object.adress.adress,
+        'value12': str(booking_object.adress.flat_or_office),
+        'value13': str(booking_object.adress.comment),
+        'value14': map_ref,
+        'value15': str(booking_object.date),
+        'value16': str(booking_object.time),
+        'value17': str(booking_object.bonus_size),
+        'value18': str(booking_object.adress.price)
+    }
+
+    #создаем письмо
+    addr_from = "gena.kuznetsov@internet.ru"
+    addr_to   = "genag4448@gmail.com"
+    password  = "o%pdUaeIUI12"
+
+    msg = MIMEMultipart()                               
+    msg['From']    = addr_from                          
+    msg['To']      = addr_to                            
+    msg['Subject'] = 'Заказ №' + str(booking_object.id) + ' M-Cleaning'
+
+    html = """
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+<style>
+    * {{
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box; 
+        font-family: 'Franklin Gothic Medium', 'Arial Narrow', Arial, sans-serif 
+    }}
+    .wow1 {{
+        margin-bottom: 10px;
+        text-align: center;
+    }}
+    .wow {{
+        margin-bottom: 10px;
+        margin-top: 10px;
+        text-align: center;
+    }}
+</style>
+<body>
+    <h1 class="wow1">Заказ: №{value1}</h1>
+    <p>Метод оплаты: {value3}</p>
+    <h1 class="wow">Состав заказа</h1>
+    <p>Тип уборки: {value4}</p>
+    <p>Тип помещения: {value5}</p>
+    <p>Площадь помещения: {value6} м2</p>
+    <p>Моем дверей: {value7} шт.</p>
+    <p>Моем окон: {value8} шт.</p>
+    <p>Моем санузлов: {value9} шт.</p>
+    <p>Расстояние от МКАД: {value10} км.</p>
+    <h1 class="wow">Местоположение</h1>
+    <p>Местоположение: {value11}</p>
+    <p>Квартира/Офис: {value12}</p>
+    <p>Подробнее: {value13}</p>
+    <p>Ссылка на карту: <a href="{value14}">ссылка</a></p>
+    <h1 class="wow">Дата и время</h1>
+    <p>Дата уборки: {value15}</p>
+    <p>Время уборки: {value16}</p>
+    <h1 class="wow">Стоимость</h1>
+    <p>Бонусов потрачено: {value17}</p>
+    <p>Стоимость заказа: {value18}</p>
+</body>
+</html>
+""".format(**data_for_html)
+
+    msg.attach(MIMEText(html, 'html', 'utf-8'))
+    server = smtplib.SMTP('smtp.mail.ru: 25')
+    server.starttls()
+    server.login(addr_from, password)
+    server.send_message(msg)
+    server.quit()
+
 
 @api_view(['GET'])
 @authentication_classes([TokenAuthentication])
@@ -468,7 +577,7 @@ def confirm_payment(request):
         )
 
     #заполнение основных данных 
-    len_adress = len(AddressModel.objects.filter(
+    address_model = AddressModel.objects.create(
         user = request.user, 
         cleaning_type = temporary_address.cleaning_type,
         premises_type = temporary_address.premises_type,
@@ -481,42 +590,10 @@ def confirm_payment(request):
         mkad = temporary_address.mkad,
         comment = temporary_address.comment,
         price = temporary_address.price,
-        bonuce = temporary_address.bonuce
-    ))
-
-    if len_adress == 0:
-        address_model = AddressModel.objects.create(
-            user = request.user, 
-            cleaning_type = temporary_address.cleaning_type,
-            premises_type = temporary_address.premises_type,
-            area = temporary_address.area,
-            door = temporary_address.door,
-            window = temporary_address.window,
-            bathroom = temporary_address.bathroom,
-            adress = temporary_address.adress,
-            flat_or_office = temporary_address.flat_or_office,
-            mkad = temporary_address.mkad,
-            comment = temporary_address.comment,
-            price = temporary_address.price,
-            bonuce = temporary_address.bonuce,
-            coordinates = temporary_address.coordinates
-        )
-    else:
-        address_model = AddressModel.objects.filter(
-            user = request.user, 
-            cleaning_type = temporary_address.cleaning_type,
-            premises_type = temporary_address.premises_type,
-            area = temporary_address.area,
-            door = temporary_address.door,
-            window = temporary_address.window,
-            bathroom = temporary_address.bathroom,
-            adress = temporary_address.adress,
-            flat_or_office = temporary_address.flat_or_office,
-            mkad = temporary_address.mkad,
-            comment = temporary_address.comment,
-            price = temporary_address.price,
-            bonuce = temporary_address.bonuce,
-        )[0]
+        bonuce = temporary_address.bonuce,
+        coordinates = temporary_address.coordinates
+    )
+    
         
     booking_object = BookingModel.objects.create(
         adress = address_model,
@@ -541,6 +618,9 @@ def confirm_payment(request):
         requests.get(this_url)
     except:
         pass
+
+    #отправить сообщение
+    my_send_mail(booking_object)
 
     return Response()
 
