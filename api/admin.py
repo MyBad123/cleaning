@@ -9,4 +9,6 @@ admin.site.register(SMSTokenModel)
 admin.site.register(BookingModel)
 admin.site.register(OptionsModel)
 admin.site.register(CoordinatesModel)
+admin.site.register(TemporaryAddressModel)
+admin.site.register(TemporaryBookingModel)
 

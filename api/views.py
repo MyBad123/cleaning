@@ -333,7 +333,7 @@ def create_payment(request):
     
     #достаем цену из адреса 
     try:
-        price = request.data.get('address').get('price')
+        price = request.data.get('adress').get('price')
     except:
         return Response(
             data = {"message": "6"},
@@ -354,7 +354,10 @@ def create_payment(request):
 
     #удаляем из временных данных объект
     if len(TemporaryAddressModel.objects.filter(user=request.user)) > 0:
-        TemporaryAddressModel.objects.get(user=request.user).delete()
+        for_delete = TemporaryAddressModel.objects.get(user=request.user)
+        for_delete_coords = for_delete.coordinates
+        for_delete.delete()
+        for_delete_coords.delete()
 
 
     #после успешного создания платежа закидываем данные во временные данные(предварительно проверяем)
@@ -369,8 +372,15 @@ def create_payment(request):
             status = status.HTTP_400_BAD_REQUEST
         )
 
+    
+    #получить координаты
+    coords_object = CoordinatesModel.objects.create(
+        **request.data['adress'].pop('coordinates')
+    )
+
     adress_object = TemporaryAddressModel.objects.create(
         user = request.user,
+        coordinates = coords_object,
         **request.data.get('adress')
     )
     booking_object = TemporaryBookingModel.objects.create(
@@ -407,7 +417,7 @@ def create_payment(request):
         return Response()
 
 
-@api_view(['POST'])
+@api_view(['GET'])
 @authentication_classes([TokenAuthentication])
 @permission_classes([IsAuthenticated])
 def confirm_payment(request):
@@ -450,7 +460,7 @@ def confirm_payment(request):
                 status = status.HTTP_400_BAD_REQUEST
             )
     elif temporary_booking.payment_tupe == 'cash':
-        pass
+        temporary_address = TemporaryAddressModel.objects.get(user=request.user)
     else:
         return Response(
             data = {"message": "5"},
@@ -489,6 +499,7 @@ def confirm_payment(request):
             comment = temporary_address.comment,
             price = temporary_address.price,
             bonuce = temporary_address.bonuce,
+            coordinates = temporary_address.coordinates
         )
     else:
         address_model = AddressModel.objects.filter(

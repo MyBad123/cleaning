@@ -90,6 +90,9 @@ class TemporaryAddressModel(models.Model):
     price = models.IntegerField()
     bonuce = models.IntegerField()
 
+    #для координат
+    coordinates = models.ForeignKey(CoordinatesModel, on_delete=models.SET_NULL, null=True)
+
 class TemporaryBookingModel(models.Model):
     '''эта модель создана для временной оплаты'''
 
