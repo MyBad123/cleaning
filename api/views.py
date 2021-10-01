@@ -64,9 +64,16 @@ def auth(request):
         user = User.objects.filter(username=phone)[0]
         personal_data = PersonalDataModel.objects.get(user=user)
         personal_data.code = str(random.randint(100000, 999999))
+        personal_data.save()
         
         ###########work with phone##########
-
+        #работа с смс 
+        try:
+            message = 'M-Cleaning.+Ваш+код+-+' + personal_data.code
+            this_url = 'https://sms.ru/sms/send?api_id=' + SMSTokenModel.objects.all()[0].token + '&to=' + user.username + '&msg=' + message + '&json=1'
+            requests.get(this_url)
+        except:
+            pass
         ####################################
         return Response()
     else:
@@ -86,7 +93,13 @@ def auth(request):
         )
 
         ###########work with phone##########
-
+        #работа с смс 
+        try:
+            message = 'M-Cleaning.+Ваш+код+-+' + personal_data.code
+            this_url = 'https://sms.ru/sms/send?api_id=' + SMSTokenModel.objects.all()[0].token + '&to=' + user.username + '&msg=' + message + '&json=1'
+            requests.get(this_url)
+        except:
+            pass
         ####################################
         return Response()
     
@@ -243,9 +256,9 @@ def get_all_adress(request):
     user = request.user
     
     #отправить серриализованные данные 
-    all_adress = AddressModel.objects.filter(user=user)
+    all_adress = BookingModel.objects.filter(adress__user=user).order_by('-id')
     return Response(
-        data = YourAdressSerializer(all_adress, many=True).data
+        data = YourBookingSerializer(all_adress, many=True).data
     )
 
 @api_view(['POST'])
@@ -435,12 +448,63 @@ def my_send_mail(booking_object):
     
 
     map_ref = 'http://maps.google.com/maps?q=' + a1 + ',' + a2 + '&z=17'
-    print(map_ref)
+    
+    #добавляем данные заказчика
+    user_phone = '+' + str(booking_object.adress.user.username)
+
+    user_object = PersonalDataModel.objects.get(
+        user = booking_object.adress.user
+    )
+    if user_object.name != None:
+        user_name = user_object.name
+    else:
+        user_name = 'отсутствует'
+    
+    if user_object.surname != None:
+        user_surname = user_object.surname
+    else:
+        user_surname = 'отсутствует'
+    
+    if user_object.patronymic != None:
+        user_patronymic = user_object.patronymic
+    else:
+        user_patronymic = 'отсутствует'
+
+    #рассчитываем стоимость
+    price_for_user_price = booking_object.adress.price
+    bonus_for_user_price = booking_object.bonus_size
+    user_price = price_for_user_price - bonus_for_user_price
+
+    #работаем с датой и временем
+    my_month_data = {
+        1: 'января',
+        2: 'февраля',
+        3: 'марта',
+        4: 'апреля',
+        5: 'мая',
+        6: 'июня',
+        7: 'июля',
+        8: 'августа',
+        9: 'сентября',
+        10: 'октября',
+        11: 'ноября',
+        12: 'декабря',
+    }
+    my_date = str(booking_object.date.day) + ' ' + my_month_data[booking_object.date.month] + ' ' + str(booking_object.date.year) + ' года'
+
+    my_time = str(booking_object.time)[0:2] + ':' + str(booking_object.time)[3:5]
+
+    #определяем, что за покупка
+    payment = 'неопределенно'
+    if booking_object.payment_tupe == 'cash':
+        payment = 'наличными'
+    if booking_object.payment_tupe == 'card':
+        payment = 'картой'
 
     #разбираемся с переменными
     data_for_html = {
         'value1': str(booking_object.id),
-        'value3': booking_object.payment_tupe,
+        'value3': payment,
         'value4': booking_object.adress.cleaning_type,
         'value5': booking_object.adress.premises_type,
         'value6': str(booking_object.adress.area),
@@ -452,10 +516,15 @@ def my_send_mail(booking_object):
         'value12': str(booking_object.adress.flat_or_office),
         'value13': str(booking_object.adress.comment),
         'value14': map_ref,
-        'value15': str(booking_object.date),
-        'value16': str(booking_object.time),
+        'value15': my_date,
+        'value16': my_time,
         'value17': str(booking_object.bonus_size),
-        'value18': str(booking_object.adress.price)
+        'value18': str(booking_object.adress.price),
+        'value19': user_phone,
+        'value20': user_name,
+        'value21': user_surname,
+        'value22': user_patronymic,
+        'value23': str(user_price)
     }
 
     #создаем письмо
@@ -484,18 +553,16 @@ def my_send_mail(booking_object):
     }}
     .wow1 {{
         margin-bottom: 10px;
-        text-align: center;
     }}
     .wow {{
         margin-bottom: 10px;
         margin-top: 10px;
-        text-align: center;
     }}
 </style>
 <body>
-    <h1 class="wow1">Заказ: №{value1}</h1>
+    <h4 class="wow1">Заказ: №{value1}</h4>
     <p>Метод оплаты: {value3}</p>
-    <h1 class="wow">Состав заказа</h1>
+    <h4 class="wow">Состав заказа</h4>
     <p>Тип уборки: {value4}</p>
     <p>Тип помещения: {value5}</p>
     <p>Площадь помещения: {value6} м2</p>
@@ -503,17 +570,23 @@ def my_send_mail(booking_object):
     <p>Моем окон: {value8} шт.</p>
     <p>Моем санузлов: {value9} шт.</p>
     <p>Расстояние от МКАД: {value10} км.</p>
-    <h1 class="wow">Местоположение</h1>
+    <h4 class="wow">Местоположение</h4>
     <p>Местоположение: {value11}</p>
     <p>Квартира/Офис: {value12}</p>
     <p>Подробнее: {value13}</p>
     <p>Ссылка на карту: <a href="{value14}">ссылка</a></p>
-    <h1 class="wow">Дата и время</h1>
+    <h4 class="wow">Дата и время</h4>
     <p>Дата уборки: {value15}</p>
     <p>Время уборки: {value16}</p>
-    <h1 class="wow">Стоимость</h1>
+    <h4 class="wow">Данные пользователя</h4>
+    <p>Телефон: {value19}</p>
+    <p>Фамилия: {value21}</p>
+    <p>Имя: {value20}</p>
+    <p>Отчество: {value22}</p>
+    <h4 class="wow">Стоимость</h4>
     <p>Бонусов потрачено: {value17}</p>
     <p>Стоимость заказа: {value18}</p>
+    <p>Итого: {value23}</p>
 </body>
 </html>
 """.format(**data_for_html)
@@ -613,8 +686,8 @@ def confirm_payment(request):
 
     #работа с смс 
     try:
-        message = 'Ваш заказ № ' + str(booking_object.id) + ' на сумму ' + str(booking_object.adress.price) + ' подтвержден'
-        this_url = 'https://sms.ru/sms/send?api_id=' + SMSTokenModel.objects.all()[0].token + 'to=' + request.user.username + '&msg=' + message + '&json=1'
+        message = 'Ваш+заказ+№+' + str(booking_object.id) + '+на+сумму+' + str(booking_object.adress.price) + '+руб.+принят'
+        this_url = 'https://sms.ru/sms/send?api_id=' + SMSTokenModel.objects.all()[0].token + '&to=' + request.user.username + '&msg=' + message + '&json=1'
         requests.get(this_url)
     except:
         pass

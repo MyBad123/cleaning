@@ -57,7 +57,7 @@ class CoordinatesSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 class YourAdressSerializer(serializers.ModelSerializer):
-    '''сериализатор для экрана ВАШИ АДРЕСА'''
+    '''сериализатор для данных адреса'''
 
     coordinates = CoordinatesSerializer()
 
@@ -66,7 +66,18 @@ class YourAdressSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'flat_or_office',
             'area', 'adress', 'flat_or_office',
-            'price', 'coordinates'
+            'price', 'premises_type','coordinates'
+        ]
+
+class YourBookingSerializer(serializers.ModelSerializer):
+    '''серриализатор для страницы ВАШИ АДРЕСА'''
+
+    adress = YourAdressSerializer()
+
+    class Meta:
+        model = BookingModel
+        fields = [
+            'id', 'adress'
         ]
 
 class UpdateSerializer(serializers.ModelSerializer):
