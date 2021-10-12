@@ -59,6 +59,10 @@ def auth(request):
             status = status.HTTP_400_BAD_REQUEST
         )
 
+    #если номер тестовый 
+    if phone == '79000000000':
+        return Response()
+
     #проверка на то, что сделдать, создать аккаунт или поработаь с прежним
     if len(User.objects.filter(username=phone)) > 0:
         user = User.objects.filter(username=phone)[0]
@@ -412,6 +416,9 @@ def create_payment(request):
 
     if payment_tupe == 'card':
         #создаем платеж
+        if adress_object.price == booking_object.bonus_size:
+            return Response()
+        
         yookassa.Configuration.configure('823848', 'live_NYj6S7t_FN_beWVPZTrolQ-8TdssWpO04U-xwYCuDBA')
         payment = yookassa.Payment.create({
             "amount": {
@@ -615,32 +622,41 @@ def confirm_payment(request):
         temporary_booking = TemporaryBookingModel.objects.get(adress__user=request.user)
 
     if temporary_booking.payment_tupe == 'card':
-        #проверка, были ли данные вообще у пользователя
-        try:
-            pay_id = TemporaryIdPayModel.obejcts.get(booking__adress__user=request.user).id_pay
-        except:
-            return Response(
-                data = {"message": "2"},
-                status = status.HTTP_400_BAD_REQUEST
-            )
+        if temporary_booking.bonus_size != temporary_booking.adress.price:
+            #проверка, были ли данные вообще у пользователя
+            try:
+                pay_id = TemporaryIdPayModel.obejcts.get(booking__adress__user=request.user).id_pay
+            except:
+                return Response(
+                    data = {"message": "2"},
+                    status = status.HTTP_400_BAD_REQUEST
+                )
 
-        #работа с проверкой оплаты
-        yookassa.Configuration.configure('823848', 'live_NYj6S7t_FN_beWVPZTrolQ-8TdssWpO04U-xwYCuDBA')
-        try:
-            payment = yookassa.Payment.find_one(pay_id)
-        except:
-            return Response(
-                data = {"message": "3"},
-                status = status.HTTP_400_BAD_REQUEST
-            )
+            #работа с проверкой оплаты
+            yookassa.Configuration.configure('823848', 'live_NYj6S7t_FN_beWVPZTrolQ-8TdssWpO04U-xwYCuDBA')
+            try:
+                payment = yookassa.Payment.find_one(pay_id)
+            except:
+                return Response(
+                    data = {"message": "3"},
+                    status = status.HTTP_400_BAD_REQUEST
+                )
 
-        #проверяем соответствие между суммами
-        temporary_address = TemporaryAddressModel.objects.get(user=request.user)
-        if str(payment.amount.value) != (str(temporary_address.price) + '.00'):
-            return Response(
-                data = {"message": "4"},
-                status = status.HTTP_400_BAD_REQUEST
-            )
+            #проверяем соответствие между суммами
+            temporary_address = TemporaryAddressModel.objects.get(user=request.user)
+            if str(payment.amount.value) != (str(temporary_address.price) + '.00'):
+                return Response(
+                    data = {"message": "4"},
+                    status = status.HTTP_400_BAD_REQUEST
+                )
+
+            #проверяем статус платежа
+            if payment.status != 'succeeded':
+                return Response(
+                    data = {"message": "4.1"},
+                    status = status.HTTP_400_BAD_REQUEST
+                )
+
     elif temporary_booking.payment_tupe == 'cash':
         temporary_address = TemporaryAddressModel.objects.get(user=request.user)
     else:
