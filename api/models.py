@@ -69,6 +69,7 @@ class BookingModel(models.Model):
     payment_tupe = models.CharField(max_length=100)
     bonus_size = models.IntegerField()
     company_status = models.CharField(max_length=100)
+    paid = models.IntegerField()
 
 
 #данная модель нужна для того, чтоб 
@@ -103,6 +104,7 @@ class TemporaryBookingModel(models.Model):
     payment_tupe = models.CharField(max_length=100)
     bonus_size = models.IntegerField()
     company_status = models.CharField(max_length=100)
+    paid = models.IntegerField()
 
 class TemporaryIdPayModel(models.Model):
     '''эта модель нужна для создания платежа'''

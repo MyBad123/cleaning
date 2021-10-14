@@ -151,6 +151,7 @@ class BookingBookingSerializer(serializers.ModelSerializer):
         fields = [
             'date', 'time', 
             'payment_tupe', 'bonus_size', 
+            'paid'
         ]
 
 

@@ -358,7 +358,7 @@ def create_payment(request):
     
     #достаем цену из адреса 
     try:
-        price = request.data.get('adress').get('price')
+        price = request.data.get('booking').get('paid')
     except:
         return Response(
             data = {"message": "6"},
@@ -480,7 +480,7 @@ def my_send_mail(booking_object):
     #рассчитываем стоимость
     price_for_user_price = booking_object.adress.price
     bonus_for_user_price = booking_object.bonus_size
-    user_price = price_for_user_price - bonus_for_user_price
+    user_price = booking_object.paid
 
     #работаем с датой и временем
     my_month_data = {
@@ -620,6 +620,7 @@ def confirm_payment(request):
         )
     else:
         temporary_booking = TemporaryBookingModel.objects.get(adress__user=request.user)
+        temporary_address = TemporaryAddressModel.objects.get(user=request.user)
 
     if temporary_booking.payment_tupe == 'card':
         if temporary_booking.bonus_size != temporary_booking.adress.price:
@@ -644,7 +645,7 @@ def confirm_payment(request):
 
             #проверяем соответствие между суммами
             temporary_address = TemporaryAddressModel.objects.get(user=request.user)
-            if str(payment.amount.value) != (str(temporary_address.price) + '.00'):
+            if str(payment.amount.value) != (str(temporary_booking.paid) + '.00'):
                 return Response(
                     data = {"message": "4"},
                     status = status.HTTP_400_BAD_REQUEST
@@ -690,7 +691,8 @@ def confirm_payment(request):
         time = temporary_booking.time,
         payment_tupe = temporary_booking.payment_tupe,
         bonus_size = temporary_booking.bonus_size,
-        company_status = temporary_booking.company_status
+        company_status = temporary_booking.company_status,
+        paid = temporary_booking.paid
     )
     
     temporary_address.delete()
