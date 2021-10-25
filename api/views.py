@@ -341,6 +341,8 @@ def create_payment(request):
             status = status.HTTP_400_BAD_REQUEST
         )
 
+    
+
     #проверка на наличие бонусов
     try:
         bonus_size = request.data.get('booking').get('bonus_size')
@@ -376,6 +378,26 @@ def create_payment(request):
             data = {"message": "8"},
             status = status.HTTP_400_BAD_REQUEST
         )
+
+    #проверяем массив дополнительных услуг
+    extra = request.data.get('extra')
+    if type(extra) != list:
+        return Response(
+            data = {"message": "8.1"},
+            status = status.HTTP_400_BAD_REQUEST
+        )
+
+    new_extra_arr = []
+    for i in extra:
+        try:
+            new_extra_arr.append(
+                ExtraModel.objects.get(id=i)
+            )
+        except:
+            return Response(
+                data = {"message": "8.2"},
+                status = status.HTTP_400_BAD_REQUEST
+            )
 
     #удаляем из временных данных объект
     if len(TemporaryAddressModel.objects.filter(user=request.user)) > 0:
@@ -413,6 +435,11 @@ def create_payment(request):
         company_status = 'new',
         **request.data.get('booking')
     )
+    for i in new_extra_arr:
+        TemporaryExtraModel.objects.create(
+            booking = booking_object,
+            extra = i
+        )
 
     if payment_tupe == 'card':
         #создаем платеж
@@ -694,6 +721,12 @@ def confirm_payment(request):
         company_status = temporary_booking.company_status,
         paid = temporary_booking.paid
     )
+
+    for i in TemporaryExtraModel.objects.filter(booking=temporary_booking):
+        ExtraForBooking.objects.create(
+            booking = booking_object,
+            extra = i.extra
+        )
     
     temporary_address.delete()
 
@@ -756,22 +789,26 @@ def get_options(request):
     '''представление для данных калькулятора'''
 
     if len(OptionsModel.objects.all()) > 0:
-        return Response(
-            data=OptionsSerializer(OptionsModel.objects.all()[0]).data
-        )
+        return Response(data={
+            "options": OptionsSerializer(OptionsModel.objects.all()[0]).data,
+            "extra": ExtraSerializer(ExtraModel.objects.all(), many=True).data
+        })
     else:
         return Response(data={
-            'type_regular': 1.0, 
-            'type_general': 1.0, 
-            'type_after_repair': 1.0, 
-            'type_building_flat': 1.0, 
-            'type_building_office': 1.0, 
-            'type_building_house': 1.0, 
-            'type_building_cafe': 1.0, 
-            'area': 1.0, 
-            'door': 1.0, 
-            'window': 1.0, 
-            'bathroom': 1.0, 
-            'mkad': 1.0
+            "options": {
+                'type_regular': 1.0, 
+                'type_general': 1.0, 
+                'type_after_repair': 1.0, 
+                'type_building_flat': 1.0, 
+                'type_building_office': 1.0, 
+                'type_building_house': 1.0, 
+                'type_building_cafe': 1.0, 
+                'area': 1.0, 
+                'door': 1.0, 
+                'window': 1.0, 
+                'bathroom': 1.0, 
+                'mkad': 1.0
+            },
+            "extra": ExtraSerializer(ExtraModel.objects.all(), many=True).data
         })
 

@@ -12,3 +12,7 @@ admin.site.register(CoordinatesModel)
 admin.site.register(TemporaryAddressModel)
 admin.site.register(TemporaryBookingModel)
 
+#модель дополнительных параметров в админку
+admin.site.register(ExtraModel)
+admin.site.register(ExtraForBooking)
+

@@ -161,3 +161,13 @@ class OptionsSerializer(serializers.ModelSerializer):
     class Meta:
         model = OptionsModel
         exclude = ['id']
+
+class  ExtraSerializer(serializers.ModelSerializer):
+    '''сериализатор для данных о дополнительных опциях'''
+
+    class Meta:
+        model = ExtraModel
+        fields = [
+            'id',  'name', 'category',
+            'muliple', 'price'
+        ]

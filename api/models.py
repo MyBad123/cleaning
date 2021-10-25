@@ -19,6 +19,16 @@ class PersonalDataModel(models.Model):
     #фото аккаунта
     photo = models.ImageField(upload_to='user_photo/', null=True, blank=True)
 
+class ExtraModel(models.Model):
+    '''модель для дополнительных услуг'''
+
+    id = models.AutoField(primary_key=True) 
+    name = models.CharField(max_length=100)
+    category = models.CharField(max_length=100)
+    muliple = models.BooleanField()
+    price = models.IntegerField()
+    
+
 class CoordinatesModel(models.Model):
     '''эта модель нужна для координат'''
 
@@ -71,6 +81,12 @@ class BookingModel(models.Model):
     company_status = models.CharField(max_length=100)
     paid = models.IntegerField()
 
+class ExtraForBooking(models.Model):
+    '''модель для заказа и параметров, которые использоватесь в моделе'''
+
+    id = models.AutoField(primary_key=True)
+    booking = models.ForeignKey(BookingModel, on_delete=models.CASCADE)
+    extra = models.ForeignKey(ExtraModel, on_delete=models.CASCADE)    
 
 #данная модель нужна для того, чтоб 
 class TemporaryAddressModel(models.Model):
@@ -106,12 +122,22 @@ class TemporaryBookingModel(models.Model):
     company_status = models.CharField(max_length=100)
     paid = models.IntegerField()
 
+class TemporaryExtraModel(models.Model):
+    '''модель для дополнительных услуг(временно)'''
+
+    id = models.AutoField(primary_key=True)
+    booking = models.ForeignKey(TemporaryBookingModel, on_delete=models.CASCADE)
+    extra = models.ForeignKey(ExtraModel, on_delete=models.CASCADE)    
+
+
 class TemporaryIdPayModel(models.Model):
     '''эта модель нужна для создания платежа'''
 
     id = models.AutoField(primary_key=True)
     booking = models.OneToOneField(TemporaryBookingModel, on_delete=models.CASCADE)
     id_pay = models.TextField()
+
+
 
 class OptionsModel(models.Model):
     '''модель параметров для калькулятора'''

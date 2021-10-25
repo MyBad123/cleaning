@@ -13,11 +13,8 @@ urlpatterns = [
     path('create-questions/', create_questions),
 
     #работа с адресами
-    #+
     path('get-all-adress/', get_all_adress),
-    #+
     path('get-adress/', get_adress),
-    #+
     path('update-adress/', update_adress),
     
 
@@ -26,8 +23,9 @@ urlpatterns = [
 
 
     #работа с заказами 
-    #+
+    #
     path('create-payment/', create_payment),
+    #
     path('confirm-payment/', confirm_payment),
 
     #передать переменные калькулятора 
