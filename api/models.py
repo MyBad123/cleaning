@@ -87,6 +87,7 @@ class ExtraForBooking(models.Model):
     id = models.AutoField(primary_key=True)
     booking = models.ForeignKey(BookingModel, on_delete=models.CASCADE)
     extra = models.ForeignKey(ExtraModel, on_delete=models.CASCADE)    
+    quantity = models.IntegerField()
 
 #данная модель нужна для того, чтоб 
 class TemporaryAddressModel(models.Model):
@@ -122,12 +123,13 @@ class TemporaryBookingModel(models.Model):
     company_status = models.CharField(max_length=100)
     paid = models.IntegerField()
 
-class TemporaryExtraModel(models.Model):
+class TemporaryExtraForBooking(models.Model):
     '''модель для дополнительных услуг(временно)'''
 
     id = models.AutoField(primary_key=True)
     booking = models.ForeignKey(TemporaryBookingModel, on_delete=models.CASCADE)
-    extra = models.ForeignKey(ExtraModel, on_delete=models.CASCADE)    
+    extra = models.ForeignKey(ExtraModel, on_delete=models.CASCADE) 
+    quantity = models.IntegerField()
 
 
 class TemporaryIdPayModel(models.Model):

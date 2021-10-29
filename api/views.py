@@ -390,9 +390,10 @@ def create_payment(request):
     new_extra_arr = []
     for i in extra:
         try:
-            new_extra_arr.append(
-                ExtraModel.objects.get(id=i)
-            )
+            new_extra_arr.append({
+                "object": ExtraModel.objects.get(id=i['id']),
+                "quantity": i['quantity']
+            })
         except:
             return Response(
                 data = {"message": "8.2"},
@@ -436,9 +437,10 @@ def create_payment(request):
         **request.data.get('booking')
     )
     for i in new_extra_arr:
-        TemporaryExtraModel.objects.create(
+        TemporaryExtraForBooking.objects.create(
             booking = booking_object,
-            extra = i
+            extra = i["object"],
+            quantity = i['quantity']
         )
 
     if payment_tupe == 'card':
@@ -535,6 +537,31 @@ def my_send_mail(booking_object):
     if booking_object.payment_tupe == 'card':
         payment = 'картой'
 
+    #определяемся с дополнительными услугами 
+    all_extra = ExtraForBooking.objects.filter(
+        booking = booking_object
+    )
+
+    for_extra_number = 0
+    for_extra_words = ""
+    for i in all_extra:
+        if for_extra_number == 0:
+            if i.quantity > 1:
+                for_extra_words += str(i.extra.name + "(" + str(i.quantity) + " шт.)")
+            else: 
+                for_extra_words += i.extra.name
+
+            for_extra_number = 1
+        else:
+            if i.quantity > 1:
+                for_extra_words += str(", " + i.extra.name + "(" + str(i.quantity) + " шт.)")
+            else: 
+                for_extra_words += str(", " + i.extra.name)
+
+    for_extra_words += "."
+
+    print(for_extra_words)
+
     #разбираемся с переменными
     data_for_html = {
         'value1': str(booking_object.id),
@@ -545,6 +572,7 @@ def my_send_mail(booking_object):
         'value7': str(booking_object.adress.door),
         'value8': str(booking_object.adress.window),
         'value9': str(booking_object.adress.bathroom),
+        'value9_1': str(for_extra_words),
         'value10': str(booking_object.adress.mkad),
         'value11': booking_object.adress.adress,
         'value12': str(booking_object.adress.flat_or_office),
@@ -603,6 +631,7 @@ def my_send_mail(booking_object):
     <p>Моем дверей: {value7} шт.</p>
     <p>Моем окон: {value8} шт.</p>
     <p>Моем санузлов: {value9} шт.</p>
+    <p>Дополнительные услуги: {value9_1}</p>
     <p>Расстояние от МКАД: {value10} км.</p>
     <h4 class="wow">Местоположение</h4>
     <p>Местоположение: {value11}</p>
@@ -722,10 +751,11 @@ def confirm_payment(request):
         paid = temporary_booking.paid
     )
 
-    for i in TemporaryExtraModel.objects.filter(booking=temporary_booking):
+    for i in TemporaryExtraForBooking.objects.filter(booking=temporary_booking):
         ExtraForBooking.objects.create(
             booking = booking_object,
-            extra = i.extra
+            extra = i.extra,
+            quantity = i.quantity
         )
     
     temporary_address.delete()
