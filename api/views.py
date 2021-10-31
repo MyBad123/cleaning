@@ -819,33 +819,70 @@ def get_options(request):
     '''представление для данных калькулятора'''
 
     if len(OptionsModel.objects.all()) > 0:
+        #собираем информацию о всех доп.услугах 
+        extra_arr = []
+        for_type = []
+        for_build = []
+        for i in ExtraModel.objects.all():
+            #к каким типам уборки 
+            if i.type_regular:
+                for_type.append("type_regular")
+            if i.type_general:
+                for_type.append("type_general")
+            if i.type_after_repair:
+                for_type.append("type_after_repair")
+            
+            #к каким типам помещения
+            if i.type_building_flat_regular:
+                for_build.append("type_building_flat")
+            if i.type_building_office:
+                for_build.append("type_building_office")
+            if i.type_building_house:
+                for_build.append("type_building_house")
+            if i.type_building_cafe:
+                for_build.append("type_building_cafe")
+
+            #основные данные + массивы
+            extra_arr_object = ExtraSerializer(i).data
+            extra_arr_object.update({"typeClean": for_type})
+            extra_arr_object.update({"typeBuilding": for_build})
+            extra_arr.append(extra_arr_object)
+
         return Response(data={
             "options": OptionsSerializer(OptionsModel.objects.all()[0]).data,
-            "extra": {
-                "type_regular": ExtraSerializer(ExtraModel.objects.filter(
-                    type_regular = True
-                ), many=True).data,
-                "type_general": ExtraSerializer(ExtraModel.objects.filter(
-                    type_general = True
-                ), many=True).data,
-                "type_after_repair": ExtraSerializer(ExtraModel.objects.filter(
-                    type_after_repair = True
-                ), many=True).data,
-                "type_building_flat_regular": ExtraSerializer(ExtraModel.objects.filter(
-                    type_building_flat_regular = True
-                ), many=True).data,
-                "type_building_office": ExtraSerializer(ExtraModel.objects.filter(
-                    type_building_office = True
-                ), many=True).data,
-                "type_building_house": ExtraSerializer(ExtraModel.objects.filter(
-                    type_building_house = True
-                ), many=True).data,
-                "type_building_cafe": ExtraSerializer(ExtraModel.objects.filter(
-                    type_building_cafe = True
-                ), many=True).data
-            }
+            "extra": extra_arr
         })
     else:
+        #собираем информацию о всех доп.услугах 
+        extra_arr = []
+        for_type = []
+        for_build = []
+        for i in ExtraModel.objects.all():
+            #к каким типам уборки 
+            if i.type_regular:
+                for_type.append("type_regular")
+            if i.type_general:
+                for_type.append("type_general")
+            if i.type_after_repair:
+                for_type.append("type_after_repair")
+            
+            #к каким типам помещения
+            if i.type_building_flat_regular:
+                for_build.append("type_building_flat")
+            if i.type_building_office:
+                for_build.append("type_building_office")
+            if i.type_building_house:
+                for_build.append("type_building_house")
+            if i.type_building_cafe:
+                for_build.append("type_building_cafe")
+
+            #основные данные + массивы
+            extra_arr_object = ExtraSerializer(i).data
+            extra_arr_object.update({"typeClean": for_type})
+            extra_arr_object.update({"typeBuilding": for_build})
+            extra_arr.append(extra_arr_object)
+            
+
         return Response(data={
             "options": {
                 'type_regular': 1.0, 
@@ -861,28 +898,6 @@ def get_options(request):
                 'bathroom': 1.0, 
                 'mkad': 1.0
             },
-            "extra": {
-                "type_regular": ExtraSerializer(ExtraModel.objects.filter(
-                    type_regular = True
-                ), many=True).data,
-                "type_general": ExtraSerializer(ExtraModel.objects.filter(
-                    type_general = True
-                ), many=True).data,
-                "type_after_repair": ExtraSerializer(ExtraModel.objects.filter(
-                    type_after_repair = True
-                ), many=True).data,
-                "type_building_flat_regular": ExtraSerializer(ExtraModel.objects.filter(
-                    type_building_flat_regular = True
-                ), many=True).data,
-                "type_building_office": ExtraSerializer(ExtraModel.objects.filter(
-                    type_building_office = True
-                ), many=True).data,
-                "type_building_house": ExtraSerializer(ExtraModel.objects.filter(
-                    type_building_house = True
-                ), many=True).data,
-                "type_building_cafe": ExtraSerializer(ExtraModel.objects.filter(
-                    type_building_cafe = True
-                ), many=True).data
-            }
+            "extra": extra_arr
         })
 
