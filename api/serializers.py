@@ -168,6 +168,5 @@ class  ExtraSerializer(serializers.ModelSerializer):
     class Meta:
         model = ExtraModel
         fields = [
-            'id',  'name', 'category',
-            'muliple', 'price'
+            'id',  'name', 'multiple', 'price'
         ]

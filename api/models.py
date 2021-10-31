@@ -19,15 +19,34 @@ class PersonalDataModel(models.Model):
     #фото аккаунта
     photo = models.ImageField(upload_to='user_photo/', null=True, blank=True)
 
+
 class ExtraModel(models.Model):
     '''модель для дополнительных услуг'''
 
     id = models.AutoField(primary_key=True) 
     name = models.CharField(max_length=100)
-    category = models.CharField(max_length=100)
-    muliple = models.BooleanField()
+    multiple = models.BooleanField()
     price = models.IntegerField()
-    
+
+    #при каких типах уборки есть эта услуга
+    type_regular = models.BooleanField()
+    type_general = models.BooleanField()
+    type_after_repair = models.BooleanField()
+
+    #при каких типах помещения есть эта услуга
+    type_building_flat_regular = models.BooleanField()
+    type_building_office = models.BooleanField()
+    type_building_house = models.BooleanField()
+    type_building_cafe = models.BooleanField()
+
+
+    def __str__(self):
+        return self.name
+
+    class Meta:
+        verbose_name = "дополнительно"
+        verbose_name_plural = "дополнительная услуга"
+
 
 class CoordinatesModel(models.Model):
     '''эта модель нужна для координат'''
@@ -89,7 +108,8 @@ class ExtraForBooking(models.Model):
     extra = models.ForeignKey(ExtraModel, on_delete=models.CASCADE)    
     quantity = models.IntegerField()
 
-#данная модель нужна для того, чтоб 
+
+#модели для временных данных
 class TemporaryAddressModel(models.Model):
     '''эта модель создана для временного адреса'''
 
@@ -140,7 +160,7 @@ class TemporaryIdPayModel(models.Model):
     id_pay = models.TextField()
 
 
-
+#служебная модель
 class OptionsModel(models.Model):
     '''модель параметров для калькулятора'''
 
