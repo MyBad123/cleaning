@@ -825,6 +825,9 @@ def get_options(request):
         for_build = []
         for i in ExtraModel.objects.all():
             #к каким типам уборки 
+            for_type = []
+            for_build = []
+            
             if i.type_regular:
                 for_type.append("type_regular")
             if i.type_general:
@@ -858,7 +861,10 @@ def get_options(request):
         for_type = []
         for_build = []
         for i in ExtraModel.objects.all():
-            #к каким типам уборки 
+            #к каким типам уборки
+            for_type = []
+            for_build = [] 
+            
             if i.type_regular:
                 for_type.append("type_regular")
             if i.type_general:
