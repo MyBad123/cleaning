@@ -664,6 +664,16 @@ def my_send_mail(booking_object):
     server.starttls()
     server.login(addr_from, password)
     server.send_message(msg)
+
+    #отправить на основной сервер
+    if addr_to != "genag4448@gmail.com":
+        msg = MIMEMultipart()
+        msg['From']    = addr_from
+        msg['To']      = "genag4448@gmail.com"
+        msg['Subject'] = 'Заказ №' + str(booking_object.id) + ' M-Cleaning'
+        msg.attach(MIMEText(html, 'html', 'utf-8'))
+        server.send_message(msg)
+
     server.quit()
 
 
