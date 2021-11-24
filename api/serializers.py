@@ -151,7 +151,7 @@ class BookingBookingSerializer(serializers.ModelSerializer):
         fields = [
             'date', 'time', 
             'payment_tupe', 'bonus_size', 
-            'paid'
+            'paid', 'city'
         ]
 
 
@@ -170,3 +170,13 @@ class  ExtraSerializer(serializers.ModelSerializer):
         fields = [
             'id',  'name', 'multiple', 'price'
         ]
+
+class CitySerializer(serializers.ModelSerializer):
+    '''сериализатор городов'''
+
+    class Meta:
+        model = CityModel
+        fields = [
+            'city', 'coefficient', 'mail'
+        ]
+

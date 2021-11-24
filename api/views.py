@@ -591,8 +591,13 @@ def my_send_mail(booking_object):
 
     #создаем письмо
     addr_from = "gena.kuznetsov@internet.ru"
-    addr_to   = "genag4448@gmail.com"
     password  = "o%pdUaeIUI12"
+
+    #на какой адрес отправляем
+    try:
+        addr_to = CityModel.objects.get(city=booking_object.city).mail
+    except: 
+        addr_to   = "genag4448@gmail.com"
 
     msg = MIMEMultipart()                               
     msg['From']    = addr_from                          
@@ -748,7 +753,8 @@ def confirm_payment(request):
         payment_tupe = temporary_booking.payment_tupe,
         bonus_size = temporary_booking.bonus_size,
         company_status = temporary_booking.company_status,
-        paid = temporary_booking.paid
+        paid = temporary_booking.paid,
+        city = temporary_booking.city
     )
 
     for i in TemporaryExtraForBooking.objects.filter(booking=temporary_booking):
@@ -853,7 +859,11 @@ def get_options(request):
 
         return Response(data={
             "options": OptionsSerializer(OptionsModel.objects.all()[0]).data,
-            "extra": extra_arr
+            "extra": extra_arr, 
+            "cities": CitySerializer(
+                CityModel.objects.all(),
+                many = True
+            ).data
         })
     else:
         #собираем информацию о всех доп.услугах 
@@ -904,6 +914,10 @@ def get_options(request):
                 'bathroom': 1.0, 
                 'mkad': 1.0
             },
-            "extra": extra_arr
+            "extra": extra_arr,
+            "cities": CitySerializer(
+                CityModel.objects.all(),
+                many = True
+            ).data
         })
 

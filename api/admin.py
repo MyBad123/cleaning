@@ -16,3 +16,5 @@ admin.site.register(TemporaryBookingModel)
 admin.site.register(ExtraModel)
 admin.site.register(ExtraForBooking)
 
+#модель городов
+admin.site.register(CityModel)
