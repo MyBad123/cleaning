@@ -10,18 +10,22 @@ from rest_framework.decorators import api_view, authentication_classes, permissi
 from rest_framework.response import Response
 from rest_framework.authtoken.models import Token
 
-from django.contrib.auth.models import User
-
-#для почты
+# для почты
 import smtplib
 
 from email.mime.multipart import MIMEMultipart      
-from email.mime.text import MIMEText                
-from email.mime.image import MIMEImage
+from email.mime.text import MIMEText
 
-#мои файлы
-from .models import *
+# мои файлы
 from .serializers import *
+from .models import (
+    CityModel, PersonalDataModel, ExtraModel,
+    CoordinatesModel, AddressModel, SupportModel,
+    SMSTokenModel, BookingModel, ExtraForBooking,
+    TemporaryAddressModel, TemporaryBookingModel,
+    TemporaryExtraForBooking, TemporaryIdPayModel,
+    OptionsModel
+)
 
 @api_view(['POST'])
 @authentication_classes([TokenAuthentication])
@@ -33,45 +37,45 @@ def auth(request):
     phone = request.data.get('phone', None)
     if phone == None:
         return Response(
-            data = {"message": "1"},
-            status = status.HTTP_400_BAD_REQUEST
+            data={"message": "1"},
+            status=status.HTTP_400_BAD_REQUEST
         )
 
     if type(phone) != str:
         return Response(
-            data = {"message": "2"},
-            status = status.HTTP_400_BAD_REQUEST
+            data={"message": "2"},
+            status=status.HTTP_400_BAD_REQUEST
         )
 
-    #проверка то, цифры ли это
+    # проверка то, цифры ли это
     int_arr = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9']
     for i in range(0, len(phone)):
         if phone[i] not in int_arr:
             return Response(
-                data = {"message": "3"},
-                status = status.HTTP_400_BAD_REQUEST
+                data={"message": "3"},
+                status=status.HTTP_400_BAD_REQUEST
             )
 
-    #проверка на то, не пустая ли строка
+    # проверка на то, не пустая ли строка
     if phone == '':
         return Response(
-            data = {"message": "4"},
-            status = status.HTTP_400_BAD_REQUEST
+            data={"message": "4"},
+            status=status.HTTP_400_BAD_REQUEST
         )
 
-    #если номер тестовый 
+    # если номер тестовый
     if phone == '79000000000':
         return Response()
 
-    #проверка на то, что сделдать, создать аккаунт или поработаь с прежним
+    # проверка на то, что сделдать, создать аккаунт или поработаь с прежним
     if len(User.objects.filter(username=phone)) > 0:
         user = User.objects.filter(username=phone)[0]
         personal_data = PersonalDataModel.objects.get(user=user)
         personal_data.code = str(random.randint(100000, 999999))
         personal_data.save()
         
-        ###########work with phone##########
-        #работа с смс 
+        # ##########work with phone##########
+        # работа с смс
         try:
             message = 'M-Cleaning.+Ваш+код+-+' + personal_data.code
             this_url = 'https://sms.ru/sms/send?api_id=' + SMSTokenModel.objects.all()[0].token + '&to=' + user.username + '&msg=' + message + '&json=1'
@@ -82,22 +86,22 @@ def auth(request):
         return Response()
     else:
         user = User.objects.create_user(
-            username = phone,
-            email = None,
-            password = str(random.randint(100000, 999999))
+            username=phone,
+            email=None,
+            password=str(random.randint(100000, 999999))
         )
         personal_data = PersonalDataModel.objects.create(
-            user = user, 
-            code = str(random.randint(100000, 999999)),
-            bonus_balance = 0, 
-            company = False
+            user=user,
+            code=str(random.randint(100000, 999999)),
+            bonus_balance=0,
+            company=False
         )
         Token.objects.create(
-            user = user
+            user=user
         )
 
-        ###########work with phone##########
-        #работа с смс 
+        # ##########work with phone##########
+        # работа с смс
         try:
             message = 'M-Cleaning.+Ваш+код+-+' + personal_data.code
             this_url = 'https://sms.ru/sms/send?api_id=' + SMSTokenModel.objects.all()[0].token + '&to=' + user.username + '&msg=' + message + '&json=1'
@@ -111,30 +115,30 @@ def auth(request):
 @authentication_classes([TokenAuthentication])
 @permission_classes([AllowAny])
 def code(request):
-    '''проверка кода'''
+    """проверка кода"""
 
-    #достаем телефон и код
+    # достаем телефон и код
     phone = request.data.get('phone', None)
     code = request.data.get('code', None)
 
-    #проверяем на валидность телефон и код
+    # проверяем на валидность телефон и код
     if (type(phone) != str) or (type(code) != str):
         return Response(
-            data = {"message": "5"},
-            status = status.HTTP_400_BAD_REQUEST
+            data={"message": "5"},
+            status=status.HTTP_400_BAD_REQUEST
         )
 
-    #достаем пользователя
+    # достаем пользователя
     user = None
     try:
         user = User.objects.get(username=phone)
     except:
         return Response(
-            data = {"message": "6"},
-            status = status.HTTP_400_BAD_REQUEST
+            data={"message": "6"},
+            status=status.HTTP_400_BAD_REQUEST
         )   
 
-    #сверяемся с полученным пользователем и его кодом
+    # сверяемся с полученным пользователем и его кодом
     try:
         PersonalDataModel.objects.get(user=user, code=code)
         return Response(data={
@@ -142,55 +146,54 @@ def code(request):
         })
     except:
         return Response(
-            data = {"message": "7"},
-            status = status.HTTP_400_BAD_REQUEST
+            data={"message": "7"},
+            status=status.HTTP_400_BAD_REQUEST
         )
+
 
 @api_view(['GET'])
 @authentication_classes([TokenAuthentication])
 @permission_classes([IsAuthenticated])
 def account(request):
-    '''получить персональные данные аккаунта'''
+    """получить персональные данные аккаунта"""
 
     data = None 
     try:
-        #достаем данные пользователя и серриализуем их
+        # достаем данные пользователя и серриализуем их
         personal_data = PersonalDataModel.objects.get(user=request.user)
         data = PersonalDataSerializer(personal_data).data
 
         return Response(
-            data = {
+            data={
                 "main_info": data,
                 "phone": request.user.username
             }
         )        
     except:
         return Response(
-            data = {"message": "8"},
-            status = status.HTTP_400_BAD_REQUEST
+            data={"message": "8"},
+            status=status.HTTP_400_BAD_REQUEST
         )
+
 
 @api_view(['POST'])
 @authentication_classes([TokenAuthentication])
 @permission_classes([IsAuthenticated])
 def update_account(request):
-    '''обновить персональные данные аккаунта'''
+    """обновить персональные данные аккаунта"""
 
-    #достаем пользователя
-    personal_data = None
+    # достаем пользователя
     try:
         personal_data = PersonalDataModel.objects.get(
-            user = request.user
+            user=request.user
         )
     except:
         return Response(
-            data = {"message": "9"},
-            status = status.HTTP_400_BAD_REQUEST
+            data={"message": "9"},
+            status=status.HTTP_400_BAD_REQUEST
         )
     
-    data = None
-
-    #серриализуем данные
+    # серриализуем данные
     serializer = SecondPersonalDataSerializer(instance=personal_data, data=request.data)
     if serializer.is_valid(raise_exception=False):
         try:
@@ -201,190 +204,193 @@ def update_account(request):
         data = serializer.save()
     else:
         return Response(
-            data = {"message": "10"},
-            status = status.HTTP_400_BAD_REQUEST
+            data={"message": "10"},
+            status=status.HTTP_400_BAD_REQUEST
         )
 
     return Response(
-        data = PersonalDataSerializer(data).data
+        data=PersonalDataSerializer(data).data
     )
+
 
 @api_view(['GET'])
 @authentication_classes([TokenAuthentication])
 @permission_classes([IsAuthenticated])
 def get_questions(request):
-    '''вывести все вопросы'''
+    """вывести все вопросы"""
 
-    #вывести список всех вопросов тех.поддержке 
-    support = None
+    # вывести список всех вопросов тех.поддержке
     try:
         support = SupportModel.objects.filter(user=request.user)
     except:
         return Response(
-            data = {"message": "11"},
-            status = status.HTTP_400_BAD_REQUEST
+            data={"message": "11"},
+            status=status.HTTP_400_BAD_REQUEST
         )
     
     return Response(data=SupportSerializer(support, many=True).data)
+
 
 @api_view(['POST'])
 @authentication_classes([TokenAuthentication])
 @permission_classes([IsAuthenticated])
 def create_questions(request):
-    '''создать новый вопрос'''
+    """создать новый вопрос"""
 
-    #вывести юзера 
+    # вывести юзера
     user = request.user
     
-    #создать новый вопрос 
+    # создать новый вопрос
     serializer = SupportSerializer(instance=user, data=request.data)
     if serializer.is_valid(raise_exception=False):
         serializer.save()
     else:
         return Response(
-            data = {"message": "12"},
-            status = status.HTTP_400_BAD_REQUEST
+            data={"message": "12"},
+            status=status.HTTP_400_BAD_REQUEST
         )
 
-    #выводим все вопросы
+    # выводим все вопросы
     support = SupportModel.objects.filter(user=user)
     return Response(data=SupportSerializer(support, many=True).data)
+
 
 @api_view(['GET'])
 @authentication_classes([TokenAuthentication])
 @permission_classes([IsAuthenticated])
 def get_all_adress(request):
-    '''получить все адреса'''
+    """получить все адреса"""
 
-    #вывести юзера 
+    # вывести юзера
     user = request.user
     
-    #отправить серриализованные данные 
+    # отправить серриализованные данные
     all_adress = BookingModel.objects.filter(adress__user=user).order_by('-id')
     return Response(
-        data = YourBookingSerializer(all_adress, many=True).data
+        data=YourBookingSerializer(all_adress, many=True).data
     )
+
 
 @api_view(['POST'])
 @authentication_classes([TokenAuthentication])
 @permission_classes([IsAuthenticated])
 def update_adress(request):
-    '''обновить како-то адрес'''
+    """обновить како-то адрес"""
 
     try:
         adress_object = AddressModel.objects.get(
-            id = request.data.get('id', None),
-            user = request.user
+            id=request.data.get('id', None),
+            user=request.user
         )
     except:
         return Response(
-            data = {"message": "13"},
-            status = status.HTTP_400_BAD_REQUEST
+            data={"message": "13"},
+            status=status.HTTP_400_BAD_REQUEST
         )
 
-    #проверка данных 
+    # проверка данных
     serializer = UpdateSerializer(
-        instance = adress_object,
-        data = request.data
+        instance=adress_object,
+        data=request.data
     )
 
     if serializer.is_valid(raise_exception=False):
         serializer_save = serializer.save()
     else:
         return Response(
-            data = {"message": "13.1"},
-            status = status.HTTP_400_BAD_REQUEST
+            data={"message": "13.1"},
+            status=status.HTTP_400_BAD_REQUEST
         )
 
     return Response(
-        data = UpdateSerializer(serializer_save).data
+        data=UpdateSerializer(serializer_save).data
     )
+
 
 @api_view(['POST'])
 @authentication_classes([TokenAuthentication])
 @permission_classes([IsAuthenticated])
 def get_adress(request):
-    '''получить подробно один какой-то адрес'''
+    """получить подробно один какой-то адрес"""
 
     try:
         adress_object = AddressModel.objects.get(
-            id = request.data.get('id', None),
-            user = request.user
+            id=request.data.get('id', None),
+            user=request.user
         )
     except:
         return Response(
-            data = {"message": "14"},
-            status = status.HTTP_400_BAD_REQUEST
+            data={"message": "14"},
+            status=status.HTTP_400_BAD_REQUEST
         )
 
     return Response(
-        data = UpdateSerializer(adress_object).data
+        data=UpdateSerializer(adress_object).data
     )
+
 
 @api_view(['POST'])
 @authentication_classes([TokenAuthentication])
 @permission_classes([IsAuthenticated])
 def create_payment(request):
-    '''это для того, чтоб создать платеж''' 
+    """это для того, чтоб создать платеж"""
     
-    #проверка на правильность написания способа оплаты
+    # проверка на правильность написания способа оплаты
     try:
         payment_tupe = request.data.get('booking').get('payment_tupe')
         if (payment_tupe != 'cash') and (payment_tupe != 'card'):
             return Response(
-                data = {"message": "1"},
-                status = status.HTTP_400_BAD_REQUEST
+                data={"message": "1"},
+                status=status.HTTP_400_BAD_REQUEST
             )
     except:
         return Response(
-            data = {"message": "3"},
-            status = status.HTTP_400_BAD_REQUEST
+            data={"message": "3"},
+            status=status.HTTP_400_BAD_REQUEST
         )
 
-    
-
-    #проверка на наличие бонусов
+    # проверка на наличие бонусов
     try:
         bonus_size = request.data.get('booking').get('bonus_size')
         bonus_balance = PersonalDataModel.objects.get(user=request.user).bonus_balance
         if int(bonus_size) > int(bonus_balance):
             return Response(
-                data = {"message": "4"},
-                status = status.HTTP_400_BAD_REQUEST
+                data={"message": "4"},
+                status=status.HTTP_400_BAD_REQUEST
             )
     except:
         return Response(
-            data = {"message": "5"},
-            status = status.HTTP_400_BAD_REQUEST
+            data={"message": "5"},
+            status=status.HTTP_400_BAD_REQUEST
         )
     
-    #достаем цену из адреса 
+    # достаем цену из адреса
     try:
         price = request.data.get('booking').get('paid')
     except:
         return Response(
-            data = {"message": "6"},
-            status = status.HTTP_400_BAD_REQUEST
+            data={"message": "6"},
+            status=status.HTTP_400_BAD_REQUEST
         )
 
-    if (type(price) != int):
+    if type(price) != int:
         return Response(
-            data = {"message": "7"},
-            status = status.HTTP_400_BAD_REQUEST
+            data={"message": "7"},
+            status=status.HTTP_400_BAD_REQUEST
         )
 
-    if (price < 0):
+    if price < 0:
         return Response(
-            data = {"message": "8"},
-            status = status.HTTP_400_BAD_REQUEST
+            data={"message": "8"},
+            status=status.HTTP_400_BAD_REQUEST
         )
 
-    #проверяем массив дополнительных услуг
+    # проверяем массив дополнительных услуг
     extra = request.data.get('extra')
     if type(extra) != list:
         return Response(
-            data = {"message": "8.1"},
-            status = status.HTTP_400_BAD_REQUEST
+            data={"message": "8.1"},
+            status=status.HTTP_400_BAD_REQUEST
         )
 
     new_extra_arr = []
@@ -396,55 +402,53 @@ def create_payment(request):
             })
         except:
             return Response(
-                data = {"message": "8.2"},
-                status = status.HTTP_400_BAD_REQUEST
+                data={"message": "8.2"},
+                status=status.HTTP_400_BAD_REQUEST
             )
 
-    #удаляем из временных данных объект
+    # удаляем из временных данных объект
     if len(TemporaryAddressModel.objects.filter(user=request.user)) > 0:
         for_delete = TemporaryAddressModel.objects.get(user=request.user)
         for_delete_coords = for_delete.coordinates
         for_delete.delete()
         for_delete_coords.delete()
 
-
-    #после успешного создания платежа закидываем данные во временные данные(предварительно проверяем)
+    # после успешного создания платежа закидываем данные во временные данные(предварительно проверяем)
     if not BookingBookingSerializer(data=request.data.get('booking', {})).is_valid(raise_exception=False):
         return Response(
-            data = {"message": "9"},
-            status = status.HTTP_400_BAD_REQUEST
+            data={"message": "9"},
+            status=status.HTTP_400_BAD_REQUEST
         )
     if not BookingAdressSerializer(data=request.data.get('adress', {})).is_valid(raise_exception=False):
         return Response(
-            data = {"message": "10"},
-            status = status.HTTP_400_BAD_REQUEST
+            dat={"message": "10"},
+            status=status.HTTP_400_BAD_REQUEST
         )
 
-    
-    #получить координаты
+    # получить координаты
     coords_object = CoordinatesModel.objects.create(
         **request.data['adress'].pop('coordinates')
     )
 
     adress_object = TemporaryAddressModel.objects.create(
-        user = request.user,
-        coordinates = coords_object,
+        user=request.user,
+        coordinates=coords_object,
         **request.data.get('adress')
     )
     booking_object = TemporaryBookingModel.objects.create(
-        adress = adress_object,
-        company_status = 'new',
+        adress=adress_object,
+        company_status='new',
         **request.data.get('booking')
     )
     for i in new_extra_arr:
         TemporaryExtraForBooking.objects.create(
-            booking = booking_object,
-            extra = i["object"],
-            quantity = i['quantity']
+            booking=booking_object,
+            extra=i["object"],
+            quantity=i['quantity']
         )
 
     if payment_tupe == 'card':
-        #создаем платеж
+        # создаем платеж
         if adress_object.price == booking_object.bonus_size:
             return Response()
         
@@ -462,8 +466,8 @@ def create_payment(request):
         })
 
         TemporaryIdPayModel.objects.create(
-            booking = booking_object,
-            id_pay = payment.id
+            booking=booking_object,
+            id_pay=payment.id
         )
 
         return Response(data={
@@ -473,45 +477,42 @@ def create_payment(request):
     else:
         return Response()
 
+
 def my_send_mail(booking_object):
-    #формируем ссылку на карту
+    # формируем ссылку на карту
     a1 = booking_object.adress.coordinates.latitude
     a1 = str(a1).replace(',', '.')
 
     a2 = booking_object.adress.coordinates.longitude
     a2 = str(a2).replace(',', '.')
     
-    
-
     map_ref = 'http://maps.google.com/maps?q=' + a1 + ',' + a2 + '&z=17'
     
-    #добавляем данные заказчика
+    # добавляем данные заказчика
     user_phone = '+' + str(booking_object.adress.user.username)
 
     user_object = PersonalDataModel.objects.get(
-        user = booking_object.adress.user
+        user=booking_object.adress.user
     )
-    if user_object.name != None:
+    if user_object.name is not None:
         user_name = user_object.name
     else:
         user_name = 'отсутствует'
     
-    if user_object.surname != None:
+    if user_object.surname is not None:
         user_surname = user_object.surname
     else:
         user_surname = 'отсутствует'
     
-    if user_object.patronymic != None:
+    if user_object.patronymic is not None:
         user_patronymic = user_object.patronymic
     else:
         user_patronymic = 'отсутствует'
 
-    #рассчитываем стоимость
-    price_for_user_price = booking_object.adress.price
-    bonus_for_user_price = booking_object.bonus_size
+    # рассчитываем стоимость
     user_price = booking_object.paid
 
-    #работаем с датой и временем
+    # работаем с датой и временем
     my_month_data = {
         1: 'января',
         2: 'февраля',
@@ -526,20 +527,25 @@ def my_send_mail(booking_object):
         11: 'ноября',
         12: 'декабря',
     }
-    my_date = str(booking_object.date.day) + ' ' + my_month_data[booking_object.date.month] + ' ' + str(booking_object.date.year) + ' года'
+    my_date = str(booking_object.date.day)
+    my_date += ' '
+    my_date += my_month_data[booking_object.date.month]
+    my_date += ' '
+    my_date += str(booking_object.date.year)
+    my_date += ' года'
 
     my_time = str(booking_object.time)[0:2] + ':' + str(booking_object.time)[3:5]
 
-    #определяем, что за покупка
+    # определяем, что за покупка
     payment = 'неопределенно'
     if booking_object.payment_tupe == 'cash':
         payment = 'наличными'
     if booking_object.payment_tupe == 'card':
         payment = 'картой'
 
-    #определяемся с дополнительными услугами 
+    # определяемся с дополнительными услугами
     all_extra = ExtraForBooking.objects.filter(
-        booking = booking_object
+        booking=booking_object
     )
 
     for_extra_number = 0
@@ -562,7 +568,7 @@ def my_send_mail(booking_object):
 
     print(for_extra_words)
 
-    #разбираемся с переменными
+    # разбираемся с переменными
     data_for_html = {
         'value1': str(booking_object.id),
         'value3': payment,
@@ -589,19 +595,19 @@ def my_send_mail(booking_object):
         'value23': str(user_price)
     }
 
-    #создаем письмо
+    # создаем письмо
     addr_from = "gena.kuznetsov@internet.ru"
-    password  = "o%pdUaeIUI12"
+    password = "o%pdUaeIUI12"
 
-    #на какой адрес отправляем
+    # на какой адрес отправляем
     try:
         addr_to = CityModel.objects.get(city=booking_object.city).mail
     except: 
-        addr_to   = "genag4448@gmail.com"
+        addr_to = "genag4448@gmail.com"
 
     msg = MIMEMultipart()                               
-    msg['From']    = addr_from                          
-    msg['To']      = addr_to                            
+    msg['From'] = addr_from
+    msg['To'] = addr_to
     msg['Subject'] = 'Заказ №' + str(booking_object.id) + ' M-Cleaning'
 
     html = """
@@ -665,11 +671,11 @@ def my_send_mail(booking_object):
     server.login(addr_from, password)
     server.send_message(msg)
 
-    #отправить на основной сервер
+    # отправить на основной сервер
     if addr_to != "genag4448@gmail.com":
         msg = MIMEMultipart()
-        msg['From']    = addr_from
-        msg['To']      = "genag4448@gmail.com"
+        msg['From'] = addr_from
+        msg['To'] = "genag4448@gmail.com"
         msg['Subject'] = 'Заказ №' + str(booking_object.id) + ' M-Cleaning'
         msg.attach(MIMEText(html, 'html', 'utf-8'))
         server.send_message(msg)
@@ -681,13 +687,13 @@ def my_send_mail(booking_object):
 @authentication_classes([TokenAuthentication])
 @permission_classes([IsAuthenticated])
 def confirm_payment(request):
-    '''этот запрос для подтверждения покупки'''
+    """этот запрос для подтверждения покупки"""
 
-    #проверяем, есть ли вообще у пользователя временные данные
+    # проверяем, есть ли вообще у пользователя временные данные
     if len(TemporaryBookingModel.objects.filter(adress__user=request.user)) == 0:
         return Response(
-            data = {"message": "1"},
-            status = status.HTTP_400_BAD_REQUEST
+            data={"message": "1"},
+            status=status.HTTP_400_BAD_REQUEST
         )
     else:
         temporary_booking = TemporaryBookingModel.objects.get(adress__user=request.user)
@@ -695,124 +701,141 @@ def confirm_payment(request):
 
     if temporary_booking.payment_tupe == 'card':
         if temporary_booking.bonus_size != temporary_booking.adress.price:
-            #проверка, были ли данные вообще у пользователя
+            # проверка, были ли данные вообще у пользователя
             try:
                 pay_id = TemporaryIdPayModel.obejcts.get(booking__adress__user=request.user).id_pay
             except:
                 return Response(
-                    data = {"message": "2"},
-                    status = status.HTTP_400_BAD_REQUEST
+                    data={"message": "2"},
+                    status=status.HTTP_400_BAD_REQUEST
                 )
 
-            #работа с проверкой оплаты
+            # работа с проверкой оплаты
             yookassa.Configuration.configure('823848', 'live_NYj6S7t_FN_beWVPZTrolQ-8TdssWpO04U-xwYCuDBA')
             try:
                 payment = yookassa.Payment.find_one(pay_id)
             except:
                 return Response(
-                    data = {"message": "3"},
-                    status = status.HTTP_400_BAD_REQUEST
+                    data={"message": "3"},
+                    status=status.HTTP_400_BAD_REQUEST
                 )
 
-            #проверяем соответствие между суммами
+            # проверяем соответствие между суммами
             temporary_address = TemporaryAddressModel.objects.get(user=request.user)
             if str(payment.amount.value) != (str(temporary_booking.paid) + '.00'):
                 return Response(
-                    data = {"message": "4"},
-                    status = status.HTTP_400_BAD_REQUEST
+                    data={"message": "4"},
+                    status=status.HTTP_400_BAD_REQUEST
                 )
 
-            #проверяем статус платежа
+            # проверяем статус платежа
             if payment.status != 'succeeded':
                 return Response(
-                    data = {"message": "4.1"},
-                    status = status.HTTP_400_BAD_REQUEST
+                    data={"message": "4.1"},
+                    status=status.HTTP_400_BAD_REQUEST
                 )
 
     elif temporary_booking.payment_tupe == 'cash':
         temporary_address = TemporaryAddressModel.objects.get(user=request.user)
     else:
         return Response(
-            data = {"message": "5"},
-            status = status.HTTP_400_BAD_REQUEST
+            data={"message": "5"},
+            status=status.HTTP_400_BAD_REQUEST
         )
 
-    #заполнение основных данных 
+    # заполнение основных данных
     address_model = AddressModel.objects.create(
-        user = request.user, 
-        cleaning_type = temporary_address.cleaning_type,
-        premises_type = temporary_address.premises_type,
-        area = temporary_address.area,
-        door = temporary_address.door,
-        window = temporary_address.window,
-        bathroom = temporary_address.bathroom,
-        adress = temporary_address.adress,
-        flat_or_office = temporary_address.flat_or_office,
-        mkad = temporary_address.mkad,
-        comment = temporary_address.comment,
-        price = temporary_address.price,
-        bonuce = temporary_address.bonuce,
-        coordinates = temporary_address.coordinates
+        user=request.user,
+        cleaning_type=temporary_address.cleaning_type,
+        premises_type=temporary_address.premises_type,
+        area=temporary_address.area,
+        door=temporary_address.door,
+        window=temporary_address.window,
+        bathroom=temporary_address.bathroom,
+        adress=temporary_address.adress,
+        flat_or_office=temporary_address.flat_or_office,
+        mkad=temporary_address.mkad,
+        comment=temporary_address.comment,
+        price=temporary_address.price,
+        bonuce=temporary_address.bonuce,
+        coordinates=temporary_address.coordinates
     )
-    
         
     booking_object = BookingModel.objects.create(
-        adress = address_model,
-        date = temporary_booking.date,
-        time = temporary_booking.time,
-        payment_tupe = temporary_booking.payment_tupe,
-        bonus_size = temporary_booking.bonus_size,
-        company_status = temporary_booking.company_status,
-        paid = temporary_booking.paid,
-        city = temporary_booking.city
+        adress=address_model,
+        date=temporary_booking.date,
+        time=temporary_booking.time,
+        payment_tupe=temporary_booking.payment_tupe,
+        bonus_size=temporary_booking.bonus_size,
+        company_status=temporary_booking.company_status,
+        paid=temporary_booking.paid,
+        city=temporary_booking.city
     )
 
     for i in TemporaryExtraForBooking.objects.filter(booking=temporary_booking):
         ExtraForBooking.objects.create(
-            booking = booking_object,
-            extra = i.extra,
-            quantity = i.quantity
+            booking=booking_object,
+            extra=i.extra,
+            quantity=i.quantity
         )
     
     temporary_address.delete()
 
-    #работа с балансом 
+    # работа с балансом
     personal_object = PersonalDataModel.objects.get(user=request.user)
-    personal_object.bonus_balance = (personal_object.bonus_balance - int(booking_object.bonus_size) + address_model.bonuce)
+
+    for_personal_object = personal_object.bonus_balance
+    for_personal_object -= int(booking_object.bonus_size)
+    for_personal_object += address_model.bonuce
+
+    personal_object.bonus_balance = for_personal_object
     personal_object.save()
 
-    #работа с смс 
+    # работа с смс
     try:
-        message = 'Ваш+заказ+№+' + str(booking_object.id) + '+на+сумму+' + str(booking_object.adress.price) + '+руб.+принят'
-        this_url = 'https://sms.ru/sms/send?api_id=' + SMSTokenModel.objects.all()[0].token + '&to=' + request.user.username + '&msg=' + message + '&json=1'
+        message = 'Ваш+заказ+№+'
+        message += str(booking_object.id)
+        message += '+на+сумму+'
+        message += str(booking_object.adress.price)
+        message += '+руб.+принят'
+
+        this_url = 'https://sms.ru/sms/send?api_id='
+        this_url += SMSTokenModel.objects.all()[0].token
+        this_url += '&to='
+        this_url += request.user.username
+        this_url += '&msg='
+        this_url += message
+        this_url += '&json=1'
+
         requests.get(this_url)
     except:
         pass
 
-    #отправить сообщение
+    # отправить сообщение
     my_send_mail(booking_object)
 
     return Response()
+
 
 @api_view(['POST'])
 @authentication_classes([TokenAuthentication])
 @permission_classes([IsAdminUser])
 def set_or_get_token(request):
-    '''данный запрос используется для получения и выведения токена'''
+    """данный запрос используется для получения и выведения токена"""
 
     token = request.data.get('token', None)
-    
+
     if ((type(token) != str) or (token == '')) and (token != None):
         return Response(
-            data = {"message": "23"},
-            status = status.HTTP_400_BAD_REQUEST
+            data={"message": "23"},
+            status=status.HTTP_400_BAD_REQUEST
         )
-    
-    if token != None:
+
+    if token is not None:
         for i in SMSTokenModel.objects.all():
             i.delete()
-        a = SMSTokenModel.objects.create(
-            token = token
+        SMSTokenModel.objects.create(
+            token=token
         )
         return Response(data={
             "token": token
@@ -820,27 +843,26 @@ def set_or_get_token(request):
     else:
         if len(SMSTokenModel.objects.all()) < 1:
             return Response(
-                data = {"message": "24"},
-                status = status.HTTP_400_BAD_REQUEST
-            ) 
+                data={"message": "24"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
         else:
             a = SMSTokenModel.objects.all()[0].token
             return Response(data={
                 "token": a
             })
-    
+
+
 @api_view(['GET'])
 @permission_classes([AllowAny])
 def get_options(request):
-    '''представление для данных калькулятора'''
+    """представление для данных калькулятора"""
 
     if len(OptionsModel.objects.all()) > 0:
-        #собираем информацию о всех доп.услугах 
+        # собираем информацию о всех доп.услугах
         extra_arr = []
-        for_type = []
-        for_build = []
         for i in ExtraModel.objects.all():
-            #к каким типам уборки 
+            # к каким типам уборки
             for_type = []
             for_build = []
             
@@ -851,7 +873,7 @@ def get_options(request):
             if i.type_after_repair:
                 for_type.append("type_after_repair")
             
-            #к каким типам помещения
+            # к каким типам помещения
             if i.type_building_flat_regular:
                 for_build.append("type_building_flat")
             if i.type_building_office:
@@ -861,7 +883,7 @@ def get_options(request):
             if i.type_building_cafe:
                 for_build.append("type_building_cafe")
 
-            #основные данные + массивы
+            # основные данные + массивы
             extra_arr_object = ExtraSerializer(i).data
             extra_arr_object.update({"typeClean": for_type})
             extra_arr_object.update({"typeBuilding": for_build})
@@ -872,16 +894,14 @@ def get_options(request):
             "extra": extra_arr, 
             "cities": CitySerializer(
                 CityModel.objects.all(),
-                many = True
+                many=True
             ).data
         })
     else:
-        #собираем информацию о всех доп.услугах 
+        # собираем информацию о всех доп.услугах
         extra_arr = []
-        for_type = []
-        for_build = []
         for i in ExtraModel.objects.all():
-            #к каким типам уборки
+            # к каким типам уборки
             for_type = []
             for_build = [] 
             
@@ -892,7 +912,7 @@ def get_options(request):
             if i.type_after_repair:
                 for_type.append("type_after_repair")
             
-            #к каким типам помещения
+            # к каким типам помещения
             if i.type_building_flat_regular:
                 for_build.append("type_building_flat")
             if i.type_building_office:
@@ -902,12 +922,11 @@ def get_options(request):
             if i.type_building_cafe:
                 for_build.append("type_building_cafe")
 
-            #основные данные + массивы
+            # основные данные + массивы
             extra_arr_object = ExtraSerializer(i).data
             extra_arr_object.update({"typeClean": for_type})
             extra_arr_object.update({"typeBuilding": for_build})
             extra_arr.append(extra_arr_object)
-            
 
         return Response(data={
             "options": {
@@ -927,7 +946,6 @@ def get_options(request):
             "extra": extra_arr,
             "cities": CitySerializer(
                 CityModel.objects.all(),
-                many = True
+                many=True
             ).data
         })
-
