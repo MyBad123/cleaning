@@ -2,6 +2,7 @@ from rest_framework import serializers
 
 from .models import *
 
+
 class PersonalDataSerializer(serializers.Serializer):
     name = serializers.CharField(allow_null=True)
     surname = serializers.CharField(allow_null=True)
@@ -11,6 +12,7 @@ class PersonalDataSerializer(serializers.Serializer):
     mail = serializers.EmailField(allow_null=True)
     bonus_balance = serializers.IntegerField(allow_null=True)
     photo = serializers.ImageField(allow_null=True)
+
 
 class SecondPersonalDataSerializer(serializers.Serializer):
     name = serializers.CharField(allow_null=True)
@@ -33,6 +35,7 @@ class SecondPersonalDataSerializer(serializers.Serializer):
         instance.save()
         return instance
 
+
 class SupportSerializer(serializers.Serializer):
     question_type = serializers.CharField()
     text = serializers.CharField()
@@ -40,24 +43,23 @@ class SupportSerializer(serializers.Serializer):
 
     def update(self, instance, validated_data):
         return SupportModel.objects.create(
-            user = instance,
-            question_type = validated_data.get("question_type"),
-            text = validated_data.get("text"),
-            answer = None
+            user=instance,
+            question_type=validated_data.get("question_type"),
+            text=validated_data.get("text"),
+            answer=None
         ) 
 
-###def create(self, validated_data):
-###        return Article.objects.create(**validated_data)
 
 class CoordinatesSerializer(serializers.ModelSerializer):
-    '''серриализатор для координат'''
+    """серриализатор для координат"""
 
     class Meta:
         model = CoordinatesModel
         fields = '__all__'
 
+
 class YourAdressSerializer(serializers.ModelSerializer):
-    '''сериализатор для данных адреса'''
+    """сериализатор для данных адреса"""
 
     coordinates = CoordinatesSerializer()
 
@@ -66,11 +68,12 @@ class YourAdressSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'flat_or_office',
             'area', 'adress', 'flat_or_office',
-            'price', 'premises_type','coordinates'
+            'price', 'premises_type', 'coordinates'
         ]
 
+
 class YourBookingSerializer(serializers.ModelSerializer):
-    '''серриализатор для страницы ВАШИ АДРЕСА'''
+    """серриализатор для страницы ВАШИ АДРЕСА"""
 
     adress = YourAdressSerializer()
 
@@ -80,8 +83,9 @@ class YourBookingSerializer(serializers.ModelSerializer):
             'id', 'adress'
         ]
 
+
 class UpdateSerializer(serializers.ModelSerializer):
-    '''сериализатор для обновления адреса'''
+    """сериализатор для обновления адреса"""
 
     coordinates = CoordinatesSerializer()
 
@@ -97,14 +101,14 @@ class UpdateSerializer(serializers.ModelSerializer):
         ]
 
     def update(self, instance, validated_data):
-        #удаляем старые координаты
+        # удаляем старые координаты
         old_coords = instance.coordinates
         try:
             old_coords.delete()
         except:
             pass
 
-        #вставляем новые координаты
+        # вставляем новые координаты
         data_new_coords = validated_data.pop('coordinates')
         try:
             new_coords = CoordinatesModel.objects.create(**data_new_coords)
@@ -128,8 +132,9 @@ class UpdateSerializer(serializers.ModelSerializer):
         instance.save()
         return instance
 
+
 class BookingAdressSerializer(serializers.ModelSerializer):
-    '''сериализатор для покупки'''
+    """сериализатор для покупки"""
 
     coordinates = CoordinatesSerializer()
 
@@ -143,8 +148,9 @@ class BookingAdressSerializer(serializers.ModelSerializer):
             'price', 'bonuce', 'coordinates'
         ]
 
+
 class BookingBookingSerializer(serializers.ModelSerializer):
-    '''сериализатор для покупки'''
+    """сериализатор для покупки"""
 
     class Meta:
         model = TemporaryBookingModel
@@ -156,14 +162,15 @@ class BookingBookingSerializer(serializers.ModelSerializer):
 
 
 class OptionsSerializer(serializers.ModelSerializer):
-    '''сериализатор для данных калькулятора'''
+    """сериализатор для данных калькулятора"""
 
     class Meta:
         model = OptionsModel
         exclude = ['id']
 
-class  ExtraSerializer(serializers.ModelSerializer):
-    '''сериализатор для данных о дополнительных опциях'''
+
+class ExtraSerializer(serializers.ModelSerializer):
+    """сериализатор для данных о дополнительных опциях"""
 
     class Meta:
         model = ExtraModel
@@ -171,12 +178,12 @@ class  ExtraSerializer(serializers.ModelSerializer):
             'id',  'name', 'multiple', 'price'
         ]
 
+
 class CitySerializer(serializers.ModelSerializer):
-    '''сериализатор городов'''
+    """сериализатор городов"""
 
     class Meta:
         model = CityModel
         fields = [
             'city', 'coefficient', 'mail'
         ]
-

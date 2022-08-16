@@ -27,15 +27,16 @@ from .models import (
     OptionsModel
 )
 
+
 @api_view(['POST'])
 @authentication_classes([TokenAuthentication])
 @permission_classes([AllowAny])
 def auth(request):
-    '''авторизация аккаунта'''
+    """авторизация аккаунта"""
     
-    #проверяем на то, есть ли поле с номером телефона
+    # проверяем на то, есть ли поле с номером телефона
     phone = request.data.get('phone', None)
-    if phone == None:
+    if phone is None:
         return Response(
             data={"message": "1"},
             status=status.HTTP_400_BAD_REQUEST
@@ -110,7 +111,8 @@ def auth(request):
             pass
         ####################################
         return Response()
-    
+
+
 @api_view(['POST'])
 @authentication_classes([TokenAuthentication])
 @permission_classes([AllowAny])
