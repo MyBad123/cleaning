@@ -167,3 +167,8 @@ Icon
 Network Trash Folder
 Temporary Items
 .apdisk
+
+# ide
+.idea/
+test.py
+
